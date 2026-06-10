@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indovina il Calciatore</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+  :root {
+    --pitch:#1a3a1f; --green:#4ade80; --white:#f0f4f0;
+    --gray:#8a9e8d; --card:#0f2412; --border:#2d5433;
+    --accent:#facc15; --red:#f87171;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--pitch);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(255,255,255,.025) 60px,rgba(255,255,255,.025) 61px);pointer-events:none;z-index:0}
+  #app{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:20px 16px 60px}
+  header{text-align:center;padding:28px 0 24px}
+  header .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+  header h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(36px,8vw,58px);font-weight:900;line-height:1;text-transform:uppercase;letter-spacing:-1px}
+  header h1 span{color:var(--green)}
+  #setup-screen{display:flex;flex-direction:column;gap:20px;margin-top:20px}
+  .box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+  .box h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:14px}
+  .player-list{display:flex;flex-direction:column;gap:10px}
+  .player-row{display:flex;gap:8px;align-items:center}
+  .player-input{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;outline:none;transition:border-color .2s}
+  .player-input:focus{border-color:var(--green)}
+  .player-input::placeholder{color:var(--gray)}
+  .btn-remove{width:34px;height:34px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+  .btn-remove:hover{background:rgba(248,113,113,.25)}
+  .btn-add{margin-top:10px;background:none;border:1px dashed var(--border);border-radius:8px;color:var(--gray);font-family:'Barlow',sans-serif;font-size:14px;padding:10px;cursor:pointer;width:100%;transition:all .2s}
+  .btn-add:hover{border-color:var(--green);color:var(--green)}
+  .btn-start{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:2px;border:none;border-radius:12px;padding:18px;cursor:pointer;width:100%;transition:all .2s;margin-top:6px}
+  .btn-start:hover{background:#86efac;transform:translateY(-1px)}
+  #game-screen{display:none}
+  .game-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .game-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--gray)}
+  .round-badge{background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.25);border-radius:20px;padding:4px 12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent)}
+  .clue-counter{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--accent)}
+  .clubs-wrap{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;min-height:54px}
+  .club-badge{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 16px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px;animation:popIn .4s cubic-bezier(.175,.885,.32,1.275)}
+  .league-pill{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:1px;color:#fff}
+  .league-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  @keyframes popIn{from{transform:scale(.7) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+  .notice{text-align:center;padding:10px;border-radius:8px;margin-bottom:12px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;display:none}
+  .notice.yellow{background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.2);color:var(--accent)}
+  .turn-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+  .turn-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:4px}
+  .turn-name{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--green);text-transform:uppercase}
+  .feedback{text-align:center;padding:12px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;animation:fadeSlide .3s ease;display:none}
+  .feedback.wrong{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+  .feedback.correct{background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.4);color:var(--green)}
+  @keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .guess-area{display:flex;gap:10px;margin-bottom:16px}
+  .ac-wrap{position:relative;flex:1}
+  #guess-input{width:100%;background:rgba(255,255,255,.06);border:2px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--white);font-family:'Barlow',sans-serif;font-size:16px;outline:none;transition:border-color .2s}
+  #guess-input:focus{border-color:var(--green)}
+  #guess-input::placeholder{color:var(--gray)}
+  #guess-input:disabled{opacity:.4;cursor:not-allowed}
+  .btn-guess{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:1px;border:none;border-radius:10px;padding:13px 20px;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .btn-guess:hover{background:#86efac}
+  .btn-guess:disabled{opacity:.4;cursor:not-allowed;background:var(--gray)}
+  .ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0d2010;border:1px solid var(--border);border-radius:10px;z-index:100;max-height:200px;overflow-y:auto;display:none}
+  .ac-item{padding:10px 16px;cursor:pointer;font-size:15px;border-bottom:1px solid rgba(45,84,51,.4);transition:background .15s}
+  .ac-item:last-child{border-bottom:none}
+  .ac-item:hover{background:rgba(74,222,128,.1);color:var(--green)}
+  .waiting-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:14px}
+  .waiting-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:10px}
+  .waiting-list{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:13px;color:var(--gray)}
+  .chip.skipped{text-decoration:line-through;opacity:.4}
+  .btn-row{display:flex;gap:10px;margin-top:4px}
+  .btn-next{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:10px;padding:13px;cursor:pointer;flex:1;transition:all .2s}
+  .btn-next:hover{background:rgba(250,204,21,.2)}
+  .btn-next:disabled{opacity:.3;cursor:not-allowed}
+  .btn-reveal{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:10px;padding:13px;cursor:pointer;flex:1;transition:all .2s;display:none}
+  .btn-reveal:hover{background:rgba(248,113,113,.2)}
+  .reveal-box{text-align:center;padding:16px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:10px;margin-bottom:16px;display:none}
+  .reveal-box .rlabel{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:4px}
+  .reveal-box .rname{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red)}
+  .btn-next-round-inline{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:2px;border:none;border-radius:10px;padding:13px;cursor:pointer;width:100%;margin-top:10px;transition:all .2s;display:none}
+  .btn-next-round-inline:hover{background:#86efac}
+  #win-screen{display:none;text-align:center}
+  .win-emoji{font-size:72px;margin-bottom:12px}
+  .win-title{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;text-transform:uppercase;color:var(--green);line-height:1;margin-bottom:6px}
+  .win-sub{font-size:18px;color:var(--gray);margin-bottom:6px}
+  .win-pname{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:var(--accent);margin-bottom:4px}
+  .win-info{font-size:13px;color:var(--gray);margin-bottom:28px}
+  .scores-table{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;text-align:left}
+  .scores-hdr{padding:12px 18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gray);border-bottom:1px solid var(--border)}
+  .score-row{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid rgba(45,84,51,.4)}
+  .score-row:last-child{border-bottom:none}
+  .score-row.winner{background:rgba(74,222,128,.07)}
+  .score-pos{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--gray);width:28px}
+  .score-name{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase}
+  .score-pts{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--green)}
+  .btn-new-round{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:2px;border:none;border-radius:12px;padding:16px;cursor:pointer;width:100%;margin-bottom:10px;transition:all .2s}
+  .btn-new-round:hover{background:#86efac}
+  .btn-end{background:none;border:1px solid var(--border);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px;border-radius:10px;padding:12px;cursor:pointer;width:100%;transition:all .2s}
+  .btn-end:hover{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="eyebrow">⚽ Gioco di Calcio</div>
+    <h1>Indovina il<br><span>Calciatore</span></h1>
+  </header>
+
+  <div id="setup-screen">
+    <div class="box">
+      <h2>👥 Giocatori</h2>
+      <div class="player-list" id="player-list">
+        <div class="player-row"><input class="player-input" type="text" placeholder="Nome giocatore 1" maxlength="30"></div>
+        <div class="player-row"><input class="player-input" type="text" placeholder="Nome giocatore 2" maxlength="30"></div>
+      </div>
+      <button class="btn-add" id="btn-add">+ Aggiungi giocatore</button>
+    </div>
+    <button class="btn-start" id="btn-start">⚽ Inizia Partita</button>
+  </div>
+
+  <div id="game-screen">
+    <div class="game-hdr">
+      <div class="game-title">Round <span id="round-num">1</span></div>
+      <div class="round-badge" id="round-badge">Round 1</div>
+      <div class="clue-counter"><span id="clues-shown">0</span>/<span id="clues-total">?</span></div>
+    </div>
+    <div class="clubs-wrap" id="clubs-wrap"></div>
+    <div class="notice yellow" id="last-notice">🔥 Ultima squadra — risposte infinite!</div>
+    <div class="reveal-box" id="reveal-box">
+      <div class="rlabel">Nessuno ha indovinato — era</div>
+      <div class="rname" id="reveal-name"></div>
+    </div>
+    <div class="turn-panel">
+      <div class="turn-label">Tocca a</div>
+      <div class="turn-name" id="current-turn">—</div>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="guess-area">
+      <div class="ac-wrap">
+        <input id="guess-input" type="text" placeholder="Scrivi il nome del calciatore..." autocomplete="off">
+        <div class="ac-list" id="ac-list"></div>
+      </div>
+      <button class="btn-guess" id="btn-guess">Conferma</button>
+    </div>
+    <div class="waiting-panel">
+      <div class="waiting-label">In attesa</div>
+      <div class="waiting-list" id="waiting-list"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-next" id="btn-next">Prossima squadra →</button>
+      <button class="btn-reveal" id="btn-reveal">Rivela risposta</button>
+    </div>
+    <button class="btn-next-round-inline" id="btn-next-round-inline">▶ Prossimo round</button>
+  </div>
+
+  <div id="win-screen">
+    <div class="win-emoji">🏆</div>
+    <div class="win-title">Indovinato!</div>
+    <div class="win-sub">Ha vinto</div>
+    <div class="win-pname" id="win-pname"></div>
+    <div class="win-info" id="win-info"></div>
+    <div class="scores-table">
+      <div class="scores-hdr">Punteggio totale</div>
+      <div id="scores-body"></div>
+    </div>
+    <button class="btn-new-round" id="btn-new-round">▶ Prossimo round</button>
+    <button class="btn-end" id="btn-end">Fine partita</button>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+// DATABASE — Carriere complete verificate
+// Incluse TUTTE le squadre (anche fuori top 5 campionati)
+// league tag usato solo per il colore/bandiera della pillola visiva
+// =====================================================================
+const LEAGUES = {
+  premier:    {flag:'ENG', color:'#7c3aed'},
+  seriea:     {flag:'ITA', color:'#2563eb'},
+  laliga:     {flag:'ESP', color:'#dc2626'},
+  bundesliga: {flag:'GER', color:'#b91c1c'},
+  ligue1:     {flag:'FRA', color:'#d97706'},
+  other:      {flag:'INT', color:'#475569'},
+};
+
+const DB = [
+  // ============ ITALIANI ============
+
+  // LEGGENDE
+  {name:"Francesco Totti", clubs:[
+    {n:"AS Roma", l:"seriea"}
+  ]},
+  {name:"Alessandro Del Piero", clubs:[
+    {n:"Juventus", l:"seriea"},
+    {n:"Sydney FC", l:"other"},
+    {n:"Delhi Dynamos", l:"other"}
+  ]},
+  {name:"Roberto Baggio", clubs:[
+    {n:"Vicenza", l:"seriea"},
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Bologna", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Brescia", l:"seriea"}
+  ]},
+  {name:"Paolo Maldini", clubs:[
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Gianluigi Buffon", clubs:[
+    {n:"Parma", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Parma", l:"seriea"}
+  ]},
+  {name:"Andrea Pirlo", clubs:[
+    {n:"Brescia", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Reggina", l:"seriea"},
+    {n:"Brescia", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"New York City FC", l:"other"}
+  ]},
+  {name:"Filippo Inzaghi", clubs:[
+    {n:"Piacenza", l:"seriea"},
+    {n:"Hellas Verona", l:"seriea"},
+    {n:"Parma", l:"seriea"},
+    {n:"Atalanta", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Christian Vieri", clubs:[
+    {n:"Prato", l:"other"},
+    {n:"Torino", l:"seriea"},
+    {n:"Pianese", l:"other"},
+    {n:"Ravenna", l:"other"},
+    {n:"Venezia", l:"seriea"},
+    {n:"Atalanta", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Lazio", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Monaco", l:"ligue1"},
+    {n:"Fiorentina", l:"seriea"}
+  ]},
+  {name:"Alessandro Nesta", clubs:[
+    {n:"Lazio", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Montreal Impact", l:"other"}
+  ]},
+  {name:"Gennaro Gattuso", clubs:[
+    {n:"Perugia", l:"seriea"},
+    {n:"Rangers FC", l:"other"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Sion", l:"other"},
+    {n:"OFI Crete", l:"other"}
+  ]},
+  {name:"Francesco Totti", clubs:[
+    {n:"AS Roma", l:"seriea"}
+  ]},
+  {name:"Fabio Cannavaro", clubs:[
+    {n:"Napoli", l:"seriea"},
+    {n:"Parma", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Al-Ahli", l:"other"}
+  ]},
+  {name:"Gianluca Vialli", clubs:[
+    {n:"Cremonese", l:"seriea"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Chelsea", l:"premier"}
+  ]},
+  {name:"Roberto Donadoni", clubs:[
+    {n:"Atalanta", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"New York Red Bulls", l:"other"},
+    {n:"Parma", l:"seriea"}
+  ]},
+  {name:"Franco Baresi", clubs:[
+    {n:"AC Milan", l:"seriea"}
+  ]},
+
+  // GENERAZIONE 2000-2015
+  {name:"Ciro Immobile", clubs:[
+    {n:"Juventus", l:"seriea"},
+    {n:"Siena", l:"seriea"},
+    {n:"Pescara", l:"seriea"},
+    {n:"Torino", l:"seriea"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Sevilla", l:"laliga"},
+    {n:"Torino", l:"seriea"},
+    {n:"Lazio", l:"seriea"},
+    {n:"Besiktas", l:"other"},
+    {n:"Bologna", l:"seriea"}
+  ]},
+  {name:"Mario Balotelli", clubs:[
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Lumezzane", l:"other"},
+    {n:"Manchester City", l:"premier"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Liverpool", l:"premier"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Nice", l:"ligue1"},
+    {n:"Marseille", l:"ligue1"},
+    {n:"Brescia", l:"seriea"},
+    {n:"Monza", l:"seriea"},
+    {n:"Sion", l:"other"},
+    {n:"Adana Demirspor", l:"other"}
+  ]},
+  {name:"Antonio Cassano", clubs:[
+    {n:"Bari", l:"seriea"},
+    {n:"AS Roma", l:"seriea"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Parma", l:"seriea"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"Hellas Verona", l:"seriea"}
+  ]},
+  {name:"Daniele De Rossi", clubs:[
+    {n:"AS Roma", l:"seriea"},
+    {n:"Boca Juniors", l:"other"}
+  ]},
+  {name:"Andrea Barzagli", clubs:[
+    {n:"Pisa", l:"other"},
+    {n:"Marsala", l:"other"},
+    {n:"Palermo", l:"seriea"},
+    {n:"Chievo", l:"seriea"},
+    {n:"Palermo", l:"seriea"},
+    {n:"VfL Wolfsburg", l:"bundesliga"},
+    {n:"Juventus", l:"seriea"}
+  ]},
+  {name:"Giorgio Chiellini", clubs:[
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Livorno", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Los Angeles FC", l:"other"}
+  ]},
+  {name:"Leonardo Bonucci", clubs:[
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Treviso", l:"other"},
+    {n:"Pisa", l:"other"},
+    {n:"Genoa", l:"seriea"},
+    {n:"Bari", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Union Berlin", l:"bundesliga"},
+    {n:"Fenerbahce", l:"other"}
+  ]},
+  {name:"Marco Materazzi", clubs:[
+    {n:"Everton", l:"premier"},
+    {n:"Perugia", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"}
+  ]},
+  {name:"Luca Toni", clubs:[
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"AS Roma", l:"seriea"},
+    {n:"Genoa", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Hellas Verona", l:"seriea"}
+  ]},
+  {name:"Vincenzo Montella", clubs:[
+    {n:"Empoli", l:"seriea"},
+    {n:"Genoa", l:"seriea"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"AS Roma", l:"seriea"},
+    {n:"Fulham", l:"premier"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"Catania", l:"seriea"}
+  ]},
+  {name:"Simone Inzaghi", clubs:[
+    {n:"Piacenza", l:"seriea"},
+    {n:"Lazio", l:"seriea"},
+    {n:"Shakhtar Donetsk", l:"other"},
+    {n:"Lazio", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Lazio", l:"seriea"}
+  ]},
+
+  // GENERAZIONE RECENTE ITALIANA
+  {name:"Nicolo Barella", clubs:[
+    {n:"Cagliari", l:"seriea"},
+    {n:"Como", l:"seriea"},
+    {n:"Crotone", l:"seriea"},
+    {n:"Cagliari", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"}
+  ]},
+  {name:"Federico Bernardeschi", clubs:[
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Toronto FC", l:"other"}
+  ]},
+  {name:"Federico Chiesa", clubs:[
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Liverpool", l:"premier"}
+  ]},
+  {name:"Ciro Immobile", clubs:[
+    {n:"Juventus", l:"seriea"},
+    {n:"Pescara", l:"seriea"},
+    {n:"Torino", l:"seriea"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Sevilla", l:"laliga"},
+    {n:"Lazio", l:"seriea"},
+    {n:"Besiktas", l:"other"}
+  ]},
+  {name:"Lautaro Martinez", clubs:[
+    {n:"Racing Club", l:"other"},
+    {n:"Inter Milan", l:"seriea"}
+  ]},
+  {name:"Dusan Vlahovic", clubs:[
+    {n:"Partizan", l:"other"},
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Juventus", l:"seriea"}
+  ]},
+  {name:"Gianluca Scamacca", clubs:[
+    {n:"Sassuolo", l:"seriea"},
+    {n:"Genoa", l:"seriea"},
+    {n:"Ascoli", l:"other"},
+    {n:"PSV Eindhoven", l:"other"},
+    {n:"Sassuolo", l:"seriea"},
+    {n:"West Ham United", l:"premier"},
+    {n:"Atalanta", l:"seriea"}
+  ]},
+  {name:"Rafael Leao", clubs:[
+    {n:"Sporting CP", l:"other"},
+    {n:"Lille", l:"ligue1"},
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Theo Hernandez", clubs:[
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Alaves", l:"laliga"},
+    {n:"Real Betis", l:"laliga"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Real Sociedad", l:"laliga"},
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Mike Maignan", clubs:[
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Lille", l:"ligue1"},
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Sandro Tonali", clubs:[
+    {n:"Brescia", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Newcastle United", l:"premier"}
+  ]},
+  {name:"Davide Frattesi", clubs:[
+    {n:"AS Roma", l:"seriea"},
+    {n:"Ascoli", l:"other"},
+    {n:"Monza", l:"seriea"},
+    {n:"Sassuolo", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"}
+  ]},
+  {name:"Matteo Politano", clubs:[
+    {n:"Juventus", l:"seriea"},
+    {n:"Perugia", l:"other"},
+    {n:"Sassuolo", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Napoli", l:"seriea"}
+  ]},
+  {name:"Lorenzo Pellegrini", clubs:[
+    {n:"AS Roma", l:"seriea"},
+    {n:"Sassuolo", l:"seriea"},
+    {n:"AS Roma", l:"seriea"}
+  ]},
+  {name:"Marco Verratti", clubs:[
+    {n:"Pescara", l:"seriea"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Al-Arabi", l:"other"}
+  ]},
+  {name:"Jorginho", clubs:[
+    {n:"Hellas Verona", l:"seriea"},
+    {n:"Napoli", l:"seriea"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Arsenal", l:"premier"}
+  ]},
+  {name:"Bryan Cristante", clubs:[
+    {n:"AC Milan", l:"seriea"},
+    {n:"Benfica", l:"other"},
+    {n:"Cagliari", l:"seriea"},
+    {n:"Pescara", l:"other"},
+    {n:"Atalanta", l:"seriea"},
+    {n:"AS Roma", l:"seriea"}
+  ]},
+  {name:"Stephan El Shaarawy", clubs:[
+    {n:"Genoa", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Monaco", l:"ligue1"},
+    {n:"AS Roma", l:"seriea"},
+    {n:"Shanghai Shenhua", l:"other"},
+    {n:"AS Roma", l:"seriea"}
+  ]},
+  {name:"Alessio Romagnoli", clubs:[
+    {n:"AS Roma", l:"seriea"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Lazio", l:"seriea"}
+  ]},
+  {name:"Mattia De Sciglio", clubs:[
+    {n:"AC Milan", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Olympique Lyonnais", l:"ligue1"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Lazio", l:"seriea"}
+  ]},
+  {name:"Hakan Calhanoglu", clubs:[
+    {n:"Karlsruher SC", l:"bundesliga"},
+    {n:"Hamburger SV", l:"bundesliga"},
+    {n:"Bayer Leverkusen", l:"bundesliga"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"}
+  ]},
+  {name:"Youssouf Fofana", clubs:[
+    {n:"Red Star FC", l:"other"},
+    {n:"Drancy", l:"other"},
+    {n:"Strasbourg", l:"ligue1"},
+    {n:"AS Monaco", l:"ligue1"},
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Teun Koopmeiners", clubs:[
+    {n:"AZ Alkmaar", l:"other"},
+    {n:"Atalanta", l:"seriea"},
+    {n:"Juventus", l:"seriea"}
+  ]},
+  {name:"Marten de Roon", clubs:[
+    {n:"Heerenveen", l:"other"},
+    {n:"Atalanta", l:"seriea"},
+    {n:"Middlesbrough", l:"premier"},
+    {n:"Atalanta", l:"seriea"}
+  ]},
+  {name:"Ademola Lookman", clubs:[
+    {n:"Charlton Athletic", l:"other"},
+    {n:"Everton", l:"premier"},
+    {n:"RB Leipzig", l:"bundesliga"},
+    {n:"Fulham", l:"premier"},
+    {n:"Leicester City", l:"premier"},
+    {n:"Atalanta", l:"seriea"}
+  ]},
+  {name:"Gleison Bremer", clubs:[
+    {n:"Atletico Mineiro", l:"other"},
+    {n:"Torino", l:"seriea"},
+    {n:"Juventus", l:"seriea"}
+  ]},
+  {name:"Khvicha Kvaratskhelia", clubs:[
+    {n:"Dinamo Tbilisi", l:"other"},
+    {n:"Lokomotiv Tbilisi", l:"other"},
+    {n:"Rubin Kazan", l:"other"},
+    {n:"Dinamo Batumi", l:"other"},
+    {n:"Napoli", l:"seriea"},
+    {n:"Paris Saint-Germain", l:"ligue1"}
+  ]},
+  {name:"Victor Osimhen", clubs:[
+    {n:"Wolfsburg", l:"bundesliga"},
+    {n:"Charleroi", l:"other"},
+    {n:"Lille", l:"ligue1"},
+    {n:"Napoli", l:"seriea"},
+    {n:"Galatasaray", l:"other"}
+  ]},
+  {name:"Matteo Guendouzi", clubs:[
+    {n:"Manchester City", l:"premier"},
+    {n:"Lorient", l:"ligue1"},
+    {n:"Arsenal", l:"premier"},
+    {n:"Hertha Berlin", l:"bundesliga"},
+    {n:"Marseille", l:"ligue1"},
+    {n:"Lazio", l:"seriea"}
+  ]},
+  {name:"Adrien Rabiot", clubs:[
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Toulouse", l:"ligue1"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Marseille", l:"ligue1"}
+  ]},
+  {name:"Paulo Dybala", clubs:[
+    {n:"Instituto", l:"other"},
+    {n:"Palermo", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"AS Roma", l:"seriea"}
+  ]},
+  {name:"Romelu Lukaku", clubs:[
+    {n:"Anderlecht", l:"other"},
+    {n:"Chelsea", l:"premier"},
+    {n:"West Bromwich Albion", l:"premier"},
+    {n:"Everton", l:"premier"},
+    {n:"Everton", l:"premier"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Chelsea", l:"premier"},
+    {n:"AS Roma", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Napoli", l:"seriea"}
+  ]},
+
+  // ============ INTERNAZIONALI ============
+
+  {name:"Lionel Messi", clubs:[
+    {n:"Barcelona", l:"laliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Inter Miami", l:"other"}
+  ]},
+  {name:"Cristiano Ronaldo", clubs:[
+    {n:"Sporting CP", l:"other"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Al Nassr", l:"other"}
+  ]},
+  {name:"Neymar Jr", clubs:[
+    {n:"Santos", l:"other"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Al-Hilal", l:"other"},
+    {n:"Santos", l:"other"}
+  ]},
+  {name:"Kylian Mbappe", clubs:[
+    {n:"AS Monaco", l:"ligue1"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Erling Haaland", clubs:[
+    {n:"Molde FK", l:"other"},
+    {n:"Red Bull Salzburg", l:"other"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Manchester City", l:"premier"}
+  ]},
+  {name:"Robert Lewandowski", clubs:[
+    {n:"Znicz Pruszkow", l:"other"},
+    {n:"Lech Poznan", l:"other"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Barcelona", l:"laliga"}
+  ]},
+  {name:"Mohamed Salah", clubs:[
+    {n:"Al-Mokawloon", l:"other"},
+    {n:"Basel", l:"other"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Fiorentina", l:"seriea"},
+    {n:"AS Roma", l:"seriea"},
+    {n:"Liverpool", l:"premier"}
+  ]},
+  {name:"Karim Benzema", clubs:[
+    {n:"Olympique Lyonnais", l:"ligue1"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Al-Ittihad", l:"other"}
+  ]},
+  {name:"Luka Modric", clubs:[
+    {n:"Dinamo Zagreb", l:"other"},
+    {n:"Zrinjski Mostar", l:"other"},
+    {n:"Inter Zapresic", l:"other"},
+    {n:"Tottenham Hotspur", l:"premier"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Kevin De Bruyne", clubs:[
+    {n:"Genk", l:"other"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Werder Bremen", l:"bundesliga"},
+    {n:"VfL Wolfsburg", l:"bundesliga"},
+    {n:"Manchester City", l:"premier"}
+  ]},
+  {name:"Harry Kane", clubs:[
+    {n:"Tottenham Hotspur", l:"premier"},
+    {n:"Leyton Orient", l:"other"},
+    {n:"Millwall", l:"other"},
+    {n:"Norwich City", l:"other"},
+    {n:"Leicester City", l:"premier"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Vinicius Junior", clubs:[
+    {n:"Flamengo", l:"other"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Zlatan Ibrahimovic", clubs:[
+    {n:"Malmo FF", l:"other"},
+    {n:"Ajax", l:"other"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Manchester United", l:"premier"},
+    {n:"LA Galaxy", l:"other"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Hammarby IF", l:"other"}
+  ]},
+  {name:"Ronaldinho", clubs:[
+    {n:"Gremio", l:"other"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Flamengo", l:"other"},
+    {n:"Atletico Mineiro", l:"other"},
+    {n:"Queretaro", l:"other"},
+    {n:"Fluminense", l:"other"}
+  ]},
+  {name:"Thierry Henry", clubs:[
+    {n:"Monaco", l:"ligue1"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Arsenal", l:"premier"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"New York Red Bulls", l:"other"},
+    {n:"Arsenal", l:"premier"}
+  ]},
+  {name:"Wayne Rooney", clubs:[
+    {n:"Everton", l:"premier"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Everton", l:"premier"},
+    {n:"D.C. United", l:"other"},
+    {n:"Derby County", l:"other"}
+  ]},
+  {name:"Zinedine Zidane", clubs:[
+    {n:"Cannes", l:"ligue1"},
+    {n:"Bordeaux", l:"ligue1"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Kaka", clubs:[
+    {n:"Sao Paulo", l:"other"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Orlando City", l:"other"},
+    {n:"Sao Paulo", l:"other"},
+    {n:"Tianjin Quanjian", l:"other"}
+  ]},
+  {name:"Ronaldo Nazario", clubs:[
+    {n:"Cruzeiro", l:"other"},
+    {n:"PSV Eindhoven", l:"other"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Corinthians", l:"other"},
+    {n:"Flamengo", l:"other"}
+  ]},
+  {name:"Antoine Griezmann", clubs:[
+    {n:"Real Sociedad", l:"laliga"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"LA Galaxy", l:"other"}
+  ]},
+  {name:"Eden Hazard", clubs:[
+    {n:"Lille", l:"ligue1"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Sergio Ramos", clubs:[
+    {n:"Sevilla", l:"laliga"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Sevilla", l:"laliga"},
+    {n:"Monterrey", l:"other"}
+  ]},
+  {name:"Toni Kroos", clubs:[
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Bayer Leverkusen", l:"bundesliga"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Gareth Bale", clubs:[
+    {n:"Southampton", l:"premier"},
+    {n:"Tottenham Hotspur", l:"premier"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Tottenham Hotspur", l:"premier"},
+    {n:"LAFC", l:"other"}
+  ]},
+  {name:"Mesut Ozil", clubs:[
+    {n:"Schalke 04", l:"bundesliga"},
+    {n:"Werder Bremen", l:"bundesliga"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Arsenal", l:"premier"},
+    {n:"Fenerbahce", l:"other"}
+  ]},
+  {name:"Cesc Fabregas", clubs:[
+    {n:"Arsenal", l:"premier"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Monaco", l:"ligue1"},
+    {n:"Como", l:"seriea"}
+  ]},
+  {name:"Franck Ribery", clubs:[
+    {n:"Boulogne", l:"other"},
+    {n:"Ales", l:"other"},
+    {n:"Stade Brestois", l:"ligue1"},
+    {n:"Metz", l:"ligue1"},
+    {n:"Galatasaray", l:"other"},
+    {n:"Marseille", l:"ligue1"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Fiorentina", l:"seriea"},
+    {n:"Salernitana", l:"seriea"}
+  ]},
+  {name:"Arjen Robben", clubs:[
+    {n:"Groningen", l:"other"},
+    {n:"PSV Eindhoven", l:"other"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Groningen", l:"other"}
+  ]},
+  {name:"David Silva", clubs:[
+    {n:"Valencia", l:"laliga"},
+    {n:"Eibar", l:"laliga"},
+    {n:"Celta Vigo", l:"laliga"},
+    {n:"Manchester City", l:"premier"},
+    {n:"Real Sociedad", l:"laliga"},
+    {n:"Al-Qadsiah", l:"other"}
+  ]},
+  {name:"Didier Drogba", clubs:[
+    {n:"Le Mans", l:"ligue1"},
+    {n:"Gueugnon", l:"ligue1"},
+    {n:"Marseille", l:"ligue1"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Shanghai Shenhua", l:"other"},
+    {n:"Galatasaray", l:"other"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Montreal Impact", l:"other"},
+    {n:"Chelsea", l:"premier"}
+  ]},
+  {name:"Radamel Falcao", clubs:[
+    {n:"Lanceros Boyaca", l:"other"},
+    {n:"River Plate", l:"other"},
+    {n:"FC Porto", l:"other"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Monaco", l:"ligue1"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Monaco", l:"ligue1"},
+    {n:"Galatasaray", l:"other"},
+    {n:"Rayo Vallecano", l:"laliga"}
+  ]},
+  {name:"Fernando Torres", clubs:[
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Liverpool", l:"premier"},
+    {n:"Chelsea", l:"premier"},
+    {n:"AC Milan", l:"seriea"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Sagan Tosu", l:"other"},
+    {n:"Atletico Madrid", l:"laliga"}
+  ]},
+  {name:"Jude Bellingham", clubs:[
+    {n:"Birmingham City", l:"other"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Erling Haaland", clubs:[
+    {n:"Bryne FK", l:"other"},
+    {n:"Molde FK", l:"other"},
+    {n:"Red Bull Salzburg", l:"other"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Manchester City", l:"premier"}
+  ]},
+  {name:"Pedri", clubs:[
+    {n:"Las Palmas", l:"laliga"},
+    {n:"Barcelona", l:"laliga"}
+  ]},
+  {name:"Gavi", clubs:[
+    {n:"Barcelona", l:"laliga"}
+  ]},
+  {name:"Florian Wirtz", clubs:[
+    {n:"Bayer Leverkusen", l:"bundesliga"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Jamal Musiala", clubs:[
+    {n:"Chelsea", l:"premier"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Jadon Sancho", clubs:[
+    {n:"Manchester City", l:"premier"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Manchester United", l:"premier"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Borussia Dortmund", l:"bundesliga"}
+  ]},
+  {name:"Ousmane Dembele", clubs:[
+    {n:"Rennes", l:"ligue1"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"}
+  ]},
+  {name:"Kylian Mbappe", clubs:[
+    {n:"AS Monaco", l:"ligue1"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Virgil van Dijk", clubs:[
+    {n:"Groningen", l:"other"},
+    {n:"Celtic", l:"other"},
+    {n:"Southampton", l:"premier"},
+    {n:"Liverpool", l:"premier"}
+  ]},
+  {name:"Thibaut Courtois", clubs:[
+    {n:"Genk", l:"other"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Manuel Neuer", clubs:[
+    {n:"Schalke 04", l:"bundesliga"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Bruno Fernandes", clubs:[
+    {n:"Novara", l:"seriea"},
+    {n:"Udinese", l:"seriea"},
+    {n:"Sampdoria", l:"seriea"},
+    {n:"Sporting CP", l:"other"},
+    {n:"Manchester United", l:"premier"}
+  ]},
+  {name:"Thomas Muller", clubs:[
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Dani Carvajal", clubs:[
+    {n:"Bayer Leverkusen", l:"bundesliga"},
+    {n:"Real Madrid", l:"laliga"}
+  ]},
+  {name:"Frenkie de Jong", clubs:[
+    {n:"Willem II", l:"other"},
+    {n:"Ajax", l:"other"},
+    {n:"Barcelona", l:"laliga"}
+  ]},
+  {name:"Joao Felix", clubs:[
+    {n:"Benfica", l:"other"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"Chelsea", l:"premier"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Atletico Madrid", l:"laliga"},
+    {n:"AC Milan", l:"seriea"}
+  ]},
+  {name:"Darwin Nunez", clubs:[
+    {n:"Penarol", l:"other"},
+    {n:"Almeria", l:"laliga"},
+    {n:"Benfica", l:"other"},
+    {n:"Liverpool", l:"premier"}
+  ]},
+  {name:"Jonathan David", clubs:[
+    {n:"KAA Gent", l:"other"},
+    {n:"Lille", l:"ligue1"},
+    {n:"Atletico Madrid", l:"laliga"}
+  ]},
+  {name:"Randal Kolo Muani", clubs:[
+    {n:"Nantes", l:"ligue1"},
+    {n:"Eintracht Frankfurt", l:"bundesliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"Juventus", l:"seriea"}
+  ]},
+  {name:"Michael Olise", clubs:[
+    {n:"Chelsea", l:"premier"},
+    {n:"Crystal Palace", l:"premier"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Cole Palmer", clubs:[
+    {n:"Manchester City", l:"premier"},
+    {n:"Chelsea", l:"premier"}
+  ]},
+  {name:"Declan Rice", clubs:[
+    {n:"Chelsea", l:"premier"},
+    {n:"West Ham United", l:"premier"},
+    {n:"Arsenal", l:"premier"}
+  ]},
+  {name:"Bukayo Saka", clubs:[
+    {n:"Arsenal", l:"premier"}
+  ]},
+  {name:"Martin Odegaard", clubs:[
+    {n:"Stromsgodset", l:"other"},
+    {n:"Real Madrid", l:"laliga"},
+    {n:"Heerenveen", l:"other"},
+    {n:"Vitesse Arnhem", l:"other"},
+    {n:"Real Sociedad", l:"laliga"},
+    {n:"Arsenal", l:"premier"}
+  ]},
+  {name:"Granit Xhaka", clubs:[
+    {n:"Basel", l:"other"},
+    {n:"Borussia Monchengladbach", l:"bundesliga"},
+    {n:"Arsenal", l:"premier"},
+    {n:"Bayer Leverkusen", l:"bundesliga"}
+  ]},
+  {name:"Alex Grimaldo", clubs:[
+    {n:"Barcelona", l:"laliga"},
+    {n:"Benfica", l:"other"},
+    {n:"Bayer Leverkusen", l:"bundesliga"}
+  ]},
+  {name:"Xavi Simons", clubs:[
+    {n:"Barcelona", l:"laliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"},
+    {n:"PSV Eindhoven", l:"other"},
+    {n:"RB Leipzig", l:"bundesliga"},
+    {n:"Paris Saint-Germain", l:"ligue1"}
+  ]},
+  {name:"Lois Openda", clubs:[
+    {n:"Club Brugge", l:"other"},
+    {n:"Vitesse Arnhem", l:"other"},
+    {n:"RC Lens", l:"ligue1"},
+    {n:"RB Leipzig", l:"bundesliga"}
+  ]},
+  {name:"Joshua Kimmich", clubs:[
+    {n:"VfB Stuttgart", l:"bundesliga"},
+    {n:"RB Leipzig", l:"bundesliga"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Bernardo Silva", clubs:[
+    {n:"Benfica", l:"other"},
+    {n:"Monaco", l:"ligue1"},
+    {n:"Manchester City", l:"premier"},
+    {n:"Barcelona", l:"laliga"}
+  ]},
+  {name:"Phil Foden", clubs:[
+    {n:"Manchester City", l:"premier"}
+  ]},
+  {name:"Marcus Rashford", clubs:[
+    {n:"Manchester United", l:"premier"},
+    {n:"Aston Villa", l:"premier"}
+  ]},
+  {name:"Sadio Mane", clubs:[
+    {n:"Generation Foot", l:"other"},
+    {n:"Metz", l:"ligue1"},
+    {n:"Red Bull Salzburg", l:"other"},
+    {n:"Southampton", l:"premier"},
+    {n:"Liverpool", l:"premier"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Al-Nassr", l:"other"}
+  ]},
+  {name:"Marquinhos", clubs:[
+    {n:"AS Roma", l:"seriea"},
+    {n:"Paris Saint-Germain", l:"ligue1"}
+  ]},
+  {name:"Leroy Sane", clubs:[
+    {n:"Schalke 04", l:"bundesliga"},
+    {n:"Manchester City", l:"premier"},
+    {n:"Bayern Munich", l:"bundesliga"}
+  ]},
+  {name:"Noni Madueke", clubs:[
+    {n:"Tottenham Hotspur", l:"premier"},
+    {n:"PSV Eindhoven", l:"other"},
+    {n:"Chelsea", l:"premier"}
+  ]},
+  {name:"Kaoru Mitoma", clubs:[
+    {n:"Kawasaki Frontale", l:"other"},
+    {n:"Union Saint-Gilloise", l:"other"},
+    {n:"Brighton", l:"premier"},
+    {n:"Atletico Madrid", l:"laliga"}
+  ]},
+  {name:"Mikel Merino", clubs:[
+    {n:"Osasuna", l:"laliga"},
+    {n:"Borussia Dortmund", l:"bundesliga"},
+    {n:"Newcastle United", l:"premier"},
+    {n:"Real Sociedad", l:"laliga"},
+    {n:"Arsenal", l:"premier"}
+  ]},
+  {name:"Joao Cancelo", clubs:[
+    {n:"Valencia", l:"laliga"},
+    {n:"Inter Milan", l:"seriea"},
+    {n:"Juventus", l:"seriea"},
+    {n:"Manchester City", l:"premier"},
+    {n:"Bayern Munich", l:"bundesliga"},
+    {n:"Barcelona", l:"laliga"},
+    {n:"Al Qadsiah", l:"other"}
+  ]},
+];
+
+// Deduplica per nome (Totti e Immobile avevano doppio)
+const seen = new Set();
+const DATABASE = DB.filter(p => {
+  if (seen.has(p.name)) return false;
+  seen.add(p.name);
+  return true;
+});
+
+const ALL_NAMES = [...new Set(DATABASE.map(p => p.name))].sort();
+
+// =====================
+// STATE
+// =====================
+let S = {
+  players:[], scores:{}, round:1,
+  footballer:null, cluesShown:0, currentTurnIdx:0,
+  skippedThisClue:[], lastClueInfinite:false, roundOver:false,
+  usedIdx:[]
+};
+
+// =====================
+// DOM
+// =====================
+const $setup = document.getElementById('setup-screen');
+const $game  = document.getElementById('game-screen');
+const $win   = document.getElementById('win-screen');
+const $roundNum = document.getElementById('round-num');
+const $roundBadge = document.getElementById('round-badge');
+const $cluesShown = document.getElementById('clues-shown');
+const $cluesTotal = document.getElementById('clues-total');
+const $clubs = document.getElementById('clubs-wrap');
+const $turn  = document.getElementById('current-turn');
+const $fb    = document.getElementById('feedback');
+const $gi    = document.getElementById('guess-input');
+const $bg    = document.getElementById('btn-guess');
+const $wl    = document.getElementById('waiting-list');
+const $btnNext   = document.getElementById('btn-next');
+const $btnReveal = document.getElementById('btn-reveal');
+const $lastNotice= document.getElementById('last-notice');
+const $revealBox = document.getElementById('reveal-box');
+const $revealName= document.getElementById('reveal-name');
+const $btnNRI    = document.getElementById('btn-next-round-inline');
+
+// =====================
+// SETUP
+// =====================
+document.getElementById('btn-add').addEventListener('click', () => {
+  const list = document.getElementById('player-list');
+  if (list.children.length >= 8) return;
+  const n = list.children.length + 1;
+  const row = document.createElement('div'); row.className = 'player-row';
+  row.innerHTML = `<input class="player-input" type="text" placeholder="Nome giocatore ${n}" maxlength="30">
+    <button class="btn-remove" onclick="this.parentElement.remove()">x</button>`;
+  list.appendChild(row);
+});
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  const names = [...document.querySelectorAll('.player-input')].map(i=>i.value.trim()).filter(Boolean);
+  if (names.length < 2) { alert('Aggiungi almeno 2 giocatori!'); return; }
+  S.players = names; S.scores = {}; S.round = 1; S.usedIdx = [];
+  names.forEach(n => S.scores[n] = 0);
+  $setup.style.display = 'none'; $game.style.display = 'block';
+  startRound();
+});
+
+// =====================
+// ROUND
+// =====================
+function startRound() {
+  $win.style.display = 'none'; $game.style.display = 'block';
+  $clubs.innerHTML = '';
+  $lastNotice.style.display = 'none';
+  $revealBox.style.display = 'none';
+  $btnNRI.style.display = 'none';
+  $btnReveal.style.display = 'none';
+  hideFB();
+  $roundNum.textContent = S.round; $roundBadge.textContent = 'Round ' + S.round;
+  S.cluesShown = 0; S.currentTurnIdx = 0; S.skippedThisClue = [];
+  S.roundOver = false; S.lastClueInfinite = false;
+
+  const pool = DATABASE.filter((_,i) => !S.usedIdx.includes(i));
+  if (!pool.length) { S.usedIdx = []; startRound(); return; }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  S.usedIdx.push(DATABASE.indexOf(pick));
+  S.footballer = pick;
+
+  $cluesTotal.textContent = pick.clubs.length;
+  $cluesShown.textContent = '0';
+  renderWaiting();
+  revealNextClue();
+}
+
+// =====================
+// CLUE
+// =====================
+function revealNextClue() {
+  if (S.roundOver) return;
+  const clubs = S.footballer.clubs;
+  if (S.cluesShown >= clubs.length) return;
+  const club = clubs[S.cluesShown];
+  const lg = LEAGUES[club.l] || LEAGUES.other;
+
+  const badge = document.createElement('div'); badge.className = 'club-badge';
+  badge.innerHTML = `<span class="league-pill" style="background:${lg.color}">${lg.flag}</span>
+    <span class="league-dot" style="background:${lg.color}"></span>
+    <span>${club.n}</span>`;
+  $clubs.appendChild(badge);
+
+  S.cluesShown++;
+  $cluesShown.textContent = S.cluesShown;
+  S.skippedThisClue = [];
+
+  const isLast = S.cluesShown === clubs.length;
+  if (isLast) {
+    S.lastClueInfinite = true;
+    $lastNotice.style.display = 'block';
+    $btnNext.disabled = true;
+    $btnNext.style.display = 'none';
+    // Show reveal button
+    $btnReveal.style.display = 'block';
+  } else {
+    $btnNext.disabled = false;
+    $btnNext.style.display = 'block';
+    $btnNext.textContent = 'Prossima squadra →';
+    $btnReveal.style.display = 'none';
+  }
+
+  $gi.value = ''; $gi.disabled = false; $bg.disabled = false;
+  hideFB(); hideAC(); renderWaiting(); $gi.focus();
+}
+
+// =====================
+// TURN
+// =====================
+function nextTurn() {
+  if (S.roundOver) return;
+  const active = S.players.map((_,i)=>i).filter(i => !S.skippedThisClue.includes(i));
+
+  if (active.length === 0) {
+    if (S.lastClueInfinite) {
+      S.skippedThisClue = []; S.currentTurnIdx = 0;
+      $gi.value = ''; $gi.disabled = false; $bg.disabled = false;
+      hideFB(); renderWaiting(); $gi.focus();
+    } else {
+      showFB('Tutti sbagliato! Prossima squadra...','wrong');
+      $gi.disabled = true; $bg.disabled = true;
+      setTimeout(() => { if (!S.roundOver) revealNextClue(); }, 1500);
+    }
+    return;
+  }
+
+  for (let i = 1; i <= S.players.length; i++) {
+    const c = (S.currentTurnIdx + i) % S.players.length;
+    if (active.includes(c)) { S.currentTurnIdx = c; break; }
+  }
+  if (!active.includes(S.currentTurnIdx)) S.currentTurnIdx = active[0];
+
+  $gi.value = ''; $gi.disabled = false; $bg.disabled = false;
+  hideFB(); hideAC(); renderWaiting(); $gi.focus();
+}
+
+function renderWaiting() {
+  $turn.textContent = S.players[S.currentTurnIdx].toUpperCase();
+  $wl.innerHTML = S.players.map((name,i) => {
+    if (i === S.currentTurnIdx) return '';
+    const sk = S.skippedThisClue.includes(i);
+    return `<span class="chip${sk?' skipped':''}">${name}</span>`;
+  }).join('');
+}
+
+// =====================
+// GUESS
+// =====================
+$bg.addEventListener('click', submitGuess);
+$gi.addEventListener('keydown', e => { if (e.key==='Enter') submitGuess(); });
+
+function submitGuess() {
+  const val = $gi.value.trim(); if (!val) return;
+  if (val.toLowerCase() === S.footballer.name.toLowerCase()) handleWin();
+  else handleWrong();
+}
+
+function handleWin() {
+  const winner = S.players[S.currentTurnIdx];
+  const pts = S.footballer.clubs.length - S.cluesShown + 1;
+  S.scores[winner] += pts; S.roundOver = true;
+  $gi.disabled = true; $bg.disabled = true; $btnNext.disabled = true;
+  $btnReveal.style.display = 'none';
+  showFB('Corretto! Era ' + S.footballer.name + '! +' + pts + ' punti', 'correct');
+
+  setTimeout(() => {
+    $game.style.display = 'none'; $win.style.display = 'block';
+    document.getElementById('win-pname').textContent = winner;
+    document.getElementById('win-info').textContent =
+      'Indovinato con ' + S.cluesShown + ' squadr' + (S.cluesShown===1?'a':'e') +
+      ' su ' + S.footballer.clubs.length + '   +' + pts + ' punt' + (pts===1?'o':'i');
+    const sorted = [...S.players].sort((a,b)=>S.scores[b]-S.scores[a]);
+    document.getElementById('scores-body').innerHTML = sorted.map((name,i) =>
+      `<div class="score-row${name===winner?' winner':''}">
+        <div class="score-pos">${i+1}</div>
+        <div class="score-name">${name}${name===winner?' 🏆':''}</div>
+        <div class="score-pts">${S.scores[name]}</div>
+      </div>`).join('');
+  }, 900);
+}
+
+function handleWrong() {
+  const name = S.players[S.currentTurnIdx];
+  showFB('Sbagliato, ' + name + '!' + (S.lastClueInfinite?' Riprova!':' Aspetta la prossima.'), 'wrong');
+  $gi.disabled = true; $bg.disabled = true;
+  if (!S.lastClueInfinite) S.skippedThisClue.push(S.currentTurnIdx);
+  else S.currentTurnIdx = (S.currentTurnIdx + 1) % S.players.length;
+  setTimeout(() => { if (!S.roundOver) nextTurn(); }, 1200);
+}
+
+// =====================
+// REVEAL
+// =====================
+$btnReveal.addEventListener('click', () => {
+  if (S.roundOver) return;
+  S.roundOver = true;
+  $gi.disabled = true; $bg.disabled = true; $btnReveal.style.display = 'none';
+  $revealName.textContent = S.footballer.name;
+  $revealBox.style.display = 'block';
+  $btnNRI.style.display = 'block';
+  hideFB();
+  // hide turn panel message
+  $turn.textContent = '—';
+  $wl.innerHTML = '';
+});
+
+$btnNRI.addEventListener('click', () => {
+  S.round++;
+  startRound();
+});
+
+// =====================
+// NEXT CLUE
+// =====================
+$btnNext.addEventListener('click', () => {
+  if (S.cluesShown < S.footballer.clubs.length && !S.roundOver) {
+    hideFB(); revealNextClue();
+  }
+});
+
+// =====================
+// AUTOCOMPLETE
+// =====================
+$gi.addEventListener('input', () => {
+  const v = $gi.value.trim().toLowerCase();
+  const list = document.getElementById('ac-list');
+  if (!v || v.length < 2) { hideAC(); return; }
+  const m = ALL_NAMES.filter(n => n.toLowerCase().includes(v)).slice(0,8);
+  if (!m.length) { hideAC(); return; }
+  list.innerHTML = m.map(n=>`<div class="ac-item" data-n="${n}">${n}</div>`).join('');
+  list.style.display = 'block';
+  list.querySelectorAll('.ac-item').forEach(el => {
+    el.addEventListener('click', () => { $gi.value = el.dataset.n; hideAC(); $gi.focus(); });
+  });
+});
+document.addEventListener('click', e => { if (!e.target.closest('.ac-wrap')) hideAC(); });
+function hideAC() { document.getElementById('ac-list').style.display = 'none'; }
+
+// =====================
+// FEEDBACK
+// =====================
+function showFB(msg, type) { $fb.textContent=msg; $fb.className='feedback '+type; $fb.style.display='block'; }
+function hideFB() { $fb.style.display='none'; }
+
+// =====================
+// WIN SCREEN
+// =====================
+document.getElementById('btn-new-round').addEventListener('click', () => { S.round++; startRound(); });
+document.getElementById('btn-end').addEventListener('click', () => {
+  $win.style.display='none'; $setup.style.display='block';
+});
+</script>
+</body>
+</html>

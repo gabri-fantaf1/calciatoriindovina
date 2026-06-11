@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indovina il Calciatore</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+:root{--pitch:#1a3a1f;--green:#4ade80;--white:#f0f4f0;--gray:#8a9e8d;--card:#0f2412;--border:#2d5433;--accent:#facc15;--red:#f87171;--blue:#60a5fa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--pitch);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(255,255,255,.025) 60px,rgba(255,255,255,.025) 61px);pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:20px 16px 60px}
+header{text-align:center;padding:28px 0 20px}
+header .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+header h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(36px,8vw,58px);font-weight:900;line-height:1;text-transform:uppercase;letter-spacing:-1px}
+header h1 span{color:var(--green)}
+.db-count{display:inline-block;margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--gray);background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:20px;padding:3px 12px}
+#setup-screen{display:flex;flex-direction:column;gap:20px;margin-top:16px}
+.box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.box h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:14px}
+.player-list{display:flex;flex-direction:column;gap:10px}
+.player-row{display:flex;gap:8px;align-items:center}
+.player-input{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--white);font-family:'Barlow',sans-serif;font-size:15px;outline:none;transition:border-color .2s}
+.player-input:focus{border-color:var(--green)}
+.player-input::placeholder{color:var(--gray)}
+.btn-remove{width:34px;height:34px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+.btn-remove:hover{background:rgba(248,113,113,.25)}
+.btn-add{margin-top:10px;background:none;border:1px dashed var(--border);border-radius:8px;color:var(--gray);font-family:'Barlow',sans-serif;font-size:14px;padding:10px;cursor:pointer;width:100%;transition:all .2s}
+.btn-add:hover{border-color:var(--green);color:var(--green)}
+/* MODE SELECTOR */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode-btn{background:rgba(255,255,255,.04);border:2px solid var(--border);border-radius:10px;padding:14px 10px;cursor:pointer;transition:all .2s;text-align:center}
+.mode-btn.active-mode{background:rgba(74,222,128,.1);border-color:var(--green)}
+.mode-btn.active-mode.ita{background:rgba(96,165,250,.1);border-color:var(--blue)}
+.mode-btn .mode-icon{font-size:26px;margin-bottom:6px}
+.mode-btn .mode-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--white)}
+.mode-btn .mode-desc{font-size:12px;color:var(--gray);margin-top:3px}
+.mode-btn.active-mode .mode-name{color:var(--green)}
+.mode-btn.active-mode.ita .mode-name{color:var(--blue)}
+.btn-start{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:2px;border:none;border-radius:12px;padding:18px;cursor:pointer;width:100%;transition:all .2s;margin-top:4px}
+.btn-start:hover{background:#86efac;transform:translateY(-1px)}
+.btn-start.ita-mode{background:var(--blue);color:#0a1525}
+.btn-start.ita-mode:hover{background:#93c5fd}
+/* GAME */
+#game-screen{display:none}
+.game-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.game-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--gray)}
+.round-badge{border-radius:20px;padding:4px 12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700}
+.round-badge.normal{background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.25);color:var(--accent)}
+.round-badge.ita{background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);color:var(--blue)}
+.clue-counter{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--accent)}
+.clubs-wrap{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;min-height:54px}
+.club-badge{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 16px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px;animation:popIn .4s cubic-bezier(.175,.885,.32,1.275)}
+.league-pill{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;border-radius:4px;padding:2px 6px;letter-spacing:1px;color:#fff;flex-shrink:0}
+.league-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+@keyframes popIn{from{transform:scale(.7) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.notice{text-align:center;padding:10px;border-radius:8px;margin-bottom:12px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;display:none}
+.notice.yellow{background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.2);color:var(--accent)}
+.mode-banner{text-align:center;padding:7px;border-radius:8px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);display:none}
+.turn-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.turn-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:4px}
+.turn-name{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--green);text-transform:uppercase}
+.feedback{text-align:center;padding:12px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;animation:fadeSlide .3s ease;display:none}
+.feedback.wrong{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.feedback.correct{background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.4);color:var(--green)}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.guess-area{display:flex;gap:10px;margin-bottom:16px}
+.ac-wrap{position:relative;flex:1}
+#guess-input{width:100%;background:rgba(255,255,255,.06);border:2px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--white);font-family:'Barlow',sans-serif;font-size:16px;outline:none;transition:border-color .2s}
+#guess-input:focus{border-color:var(--green)}
+#guess-input::placeholder{color:var(--gray)}
+#guess-input:disabled{opacity:.4;cursor:not-allowed}
+.btn-guess{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:1px;border:none;border-radius:10px;padding:13px 20px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-guess:hover{background:#86efac}
+.btn-guess:disabled{opacity:.4;cursor:not-allowed;background:var(--gray)}
+.ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0d2010;border:1px solid var(--border);border-radius:10px;z-index:100;max-height:200px;overflow-y:auto;display:none}
+.ac-item{padding:10px 16px;cursor:pointer;font-size:15px;border-bottom:1px solid rgba(45,84,51,.4);transition:background .15s}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover{background:rgba(74,222,128,.1);color:var(--green)}
+.waiting-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:14px}
+.waiting-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gray);margin-bottom:10px}
+.waiting-list{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:13px;color:var(--gray)}
+.chip.skipped{text-decoration:line-through;opacity:.4}
+.btn-row{display:flex;gap:10px;margin-top:4px}
+.btn-next{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:10px;padding:13px;cursor:pointer;flex:1;transition:all .2s}
+.btn-next:hover{background:rgba(250,204,21,.2)}
+.btn-next:disabled{opacity:.3;cursor:not-allowed}
+.btn-reveal{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:10px;padding:13px;cursor:pointer;flex:1;transition:all .2s;display:none}
+.btn-reveal:hover{background:rgba(248,113,113,.2)}
+.reveal-box{text-align:center;padding:16px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:10px;margin-bottom:16px;display:none}
+.reveal-box .rlabel{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:4px}
+.reveal-box .rname{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red)}
+.btn-nri{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:2px;border:none;border-radius:10px;padding:13px;cursor:pointer;width:100%;margin-top:10px;transition:all .2s;display:none}
+.btn-nri:hover{background:#86efac}
+/* WIN */
+#win-screen{display:none;text-align:center}
+.win-emoji{font-size:72px;margin-bottom:12px}
+.win-title{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;text-transform:uppercase;color:var(--green);line-height:1;margin-bottom:6px}
+.win-sub{font-size:18px;color:var(--gray);margin-bottom:6px}
+.win-pname{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:var(--accent);margin-bottom:4px}
+.win-info{font-size:13px;color:var(--gray);margin-bottom:28px}
+.scores-table{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;text-align:left}
+.scores-hdr{padding:12px 18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gray);border-bottom:1px solid var(--border)}
+.score-row{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid rgba(45,84,51,.4)}
+.score-row:last-child{border-bottom:none}
+.score-row.winner{background:rgba(74,222,128,.07)}
+.score-pos{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--gray);width:28px}
+.score-name{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase}
+.score-pts{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--green)}
+.btn-new-round{background:var(--green);color:#0a1f0d;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:2px;border:none;border-radius:12px;padding:16px;cursor:pointer;width:100%;margin-bottom:10px;transition:all .2s}
+.btn-new-round:hover{background:#86efac}
+.btn-end{background:none;border:1px solid var(--border);color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px;border-radius:10px;padding:12px;cursor:pointer;width:100%;transition:all .2s}
+.btn-end:hover{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="eyebrow">⚽ Gioco di Calcio</div>
+  <h1>Indovina il<br><span>Calciatore</span></h1>
+  <span class="db-count" id="db-count"></span>
+</header>
+<div id="setup-screen">
+  <div class="box">
+    <h2>👥 Giocatori</h2>
+    <div class="player-list" id="player-list">
+      <div class="player-row"><input class="player-input" type="text" placeholder="Nome giocatore 1" maxlength="30"></div>
+      <div class="player-row"><input class="player-input" type="text" placeholder="Nome giocatore 2" maxlength="30"></div>
+    </div>
+    <button class="btn-add" id="btn-add">+ Aggiungi giocatore</button>
+  </div>
+  <div class="box">
+    <h2>🎮 Modalità di gioco</h2>
+    <div class="mode-grid">
+      <button class="mode-btn active-mode" data-mode="all" id="mode-all">
+        <div class="mode-icon">🌍</div>
+        <div class="mode-name">Tutto il mondo</div>
+        <div class="mode-desc">Tutti i calciatori del database</div>
+      </button>
+      <button class="mode-btn" data-mode="ita" id="mode-ita">
+        <div class="mode-icon">🇮🇹</div>
+        <div class="mode-name">Solo Italiani</div>
+        <div class="mode-desc">Solo calciatori italiani</div>
+      </button>
+    </div>
+  </div>
+  <button class="btn-start" id="btn-start">⚽ Inizia Partita</button>
+</div>
+<div id="game-screen">
+  <div class="game-hdr">
+    <div class="game-title">Round <span id="round-num">1</span></div>
+    <div class="round-badge normal" id="round-badge">Round 1</div>
+    <div class="clue-counter"><span id="clues-shown">0</span>/<span id="clues-total">?</span></div>
+  </div>
+  <div class="mode-banner" id="mode-banner">🇮🇹 Modalità Solo Italiani</div>
+  <div class="clubs-wrap" id="clubs-wrap"></div>
+  <div class="notice yellow" id="last-notice">🔥 Ultima squadra — risposte infinite!</div>
+  <div class="reveal-box" id="reveal-box">
+    <div class="rlabel">Nessuno ha indovinato — era</div>
+    <div class="rname" id="reveal-name"></div>
+  </div>
+  <div class="turn-panel">
+    <div class="turn-label">Tocca a</div>
+    <div class="turn-name" id="current-turn">—</div>
+  </div>
+  <div class="feedback" id="feedback"></div>
+  <div class="guess-area">
+    <div class="ac-wrap">
+      <input id="guess-input" type="text" placeholder="Scrivi il nome del calciatore..." autocomplete="off">
+      <div class="ac-list" id="ac-list"></div>
+    </div>
+    <button class="btn-guess" id="btn-guess">Conferma</button>
+  </div>
+  <div class="waiting-panel">
+    <div class="waiting-label">In attesa</div>
+    <div class="waiting-list" id="waiting-list"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn-next" id="btn-next">Prossima squadra →</button>
+    <button class="btn-reveal" id="btn-reveal">Rivela risposta</button>
+  </div>
+  <button class="btn-nri" id="btn-nri">▶ Prossimo round</button>
+</div>
+<div id="win-screen">
+  <div class="win-emoji">🏆</div>
+  <div class="win-title">Indovinato!</div>
+  <div class="win-sub">Ha vinto</div>
+  <div class="win-pname" id="win-pname"></div>
+  <div class="win-info" id="win-info"></div>
+  <div class="scores-table">
+    <div class="scores-hdr">Punteggio totale</div>
+    <div id="scores-body"></div>
+  </div>
+  <button class="btn-new-round" id="btn-new-round">▶ Prossimo round</button>
+  <button class="btn-end" id="btn-end">Fine partita</button>
+</div>
+</div>
+<script>
+const L={seriea:{f:'ITA',c:'#2563eb'},premier:{f:'ENG',c:'#7c3aed'},laliga:{f:'ESP',c:'#dc2626'},bundesliga:{f:'GER',c:'#b91c1c'},ligue1:{f:'FRA',c:'#d97706'},other:{f:'INT',c:'#475569'}};
+
+// ita:true = calciatore italiano (per modalità solo italiani)
+// ret:true = ritirato
+const DB=[
+// ============================================================
+// ITALIANI RITIRATI — verificati da Wikipedia/Treccani
+// ============================================================
+{name:"Francesco Totti",ita:true,ret:true,clubs:[{n:"AS Roma",l:"seriea"}]},
+{name:"Alessandro Del Piero",ita:true,ret:true,clubs:[{n:"Padova",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Sydney FC",l:"other"},{n:"Delhi Dynamos",l:"other"},{n:"Melbourne City",l:"other"}]},
+{name:"Roberto Baggio",ita:true,ret:true,clubs:[{n:"Vicenza",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Brescia",l:"seriea"}]},
+{name:"Paolo Maldini",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"}]},
+{name:"Gianluigi Buffon",ita:true,ret:true,clubs:[{n:"Parma",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Juventus",l:"seriea"},{n:"Parma",l:"seriea"}]},
+{name:"Andrea Pirlo",ita:true,ret:true,clubs:[{n:"Brescia",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Reggina",l:"seriea"},{n:"Brescia",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"New York City FC",l:"other"}]},
+{name:"Franco Baresi",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"}]},
+{name:"Filippo Inzaghi",ita:true,ret:true,clubs:[{n:"Leffe",l:"other"},{n:"Piacenza",l:"seriea"},{n:"Hellas Verona",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Alessandro Nesta",ita:true,ret:true,clubs:[{n:"Lazio",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Montreal Impact",l:"other"}]},
+{name:"Gennaro Gattuso",ita:true,ret:true,clubs:[{n:"Perugia",l:"seriea"},{n:"Rangers FC",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Sion",l:"other"},{n:"OFI Crete",l:"other"}]},
+{name:"Fabio Cannavaro",ita:true,ret:true,clubs:[{n:"Napoli",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"Juventus",l:"seriea"},{n:"Al-Ahli",l:"other"},{n:"Bunyodkor",l:"other"}]},
+{name:"Christian Vieri",ita:true,ret:true,clubs:[{n:"Torino",l:"seriea"},{n:"Piacenza",l:"seriea"},{n:"Venezia",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Atletico Madrid",l:"laliga"},{n:"Lazio",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Monaco",l:"ligue1"},{n:"Fiorentina",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Chelsea",l:"premier"}]},
+{name:"Roberto Mancini",ita:true,ret:true,clubs:[{n:"Bologna",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Leicester City",l:"premier"}]},
+{name:"Gianluca Vialli",ita:true,ret:true,clubs:[{n:"Cremonese",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Chelsea",l:"premier"}]},
+{name:"Roberto Donadoni",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"New York MetroStars",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Al-Ittihad",l:"other"}]},
+{name:"Dino Zoff",ita:true,ret:true,clubs:[{n:"Udinese",l:"seriea"},{n:"Mantova",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Gianni Rivera",ita:true,ret:true,clubs:[{n:"Alessandria",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Sandro Mazzola",ita:true,ret:true,clubs:[{n:"Inter Milan",l:"seriea"}]},
+{name:"Giacinto Facchetti",ita:true,ret:true,clubs:[{n:"Inter Milan",l:"seriea"}]},
+{name:"Luigi Riva",ita:true,ret:true,clubs:[{n:"Legnano",l:"other"},{n:"Cagliari",l:"seriea"}]},
+{name:"Luca Toni",ita:true,ret:true,clubs:[{n:"Modena",l:"seriea"},{n:"Lodigiani",l:"other"},{n:"Treviso",l:"other"},{n:"Vicenza",l:"seriea"},{n:"Brescia",l:"seriea"},{n:"Palermo",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Bayern Munich",l:"bundesliga"},{n:"AS Roma",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Hellas Verona",l:"seriea"}]},
+{name:"Marco Materazzi",ita:true,ret:true,clubs:[{n:"Everton",l:"premier"},{n:"Perugia",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Simone Inzaghi",ita:true,ret:true,clubs:[{n:"Piacenza",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Shakhtar Donetsk",l:"other"},{n:"Lazio",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Vincenzo Montella",ita:true,ret:true,clubs:[{n:"Empoli",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Fulham",l:"premier"},{n:"Sampdoria",l:"seriea"},{n:"Catania",l:"seriea"}]},
+{name:"Demetrio Albertini",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Padova",l:"other"},{n:"Atalanta",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Atletico Madrid",l:"laliga"},{n:"Lazio",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Atalanta",l:"seriea"}]},
+{name:"Angelo Peruzzi",ita:true,ret:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Massimo Ambrosini",ita:true,ret:true,clubs:[{n:"Cesena",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Vicenza",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Parma",l:"seriea"}]},
+{name:"Paolo Rossi",ita:true,ret:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Como",l:"seriea"},{n:"Vicenza",l:"seriea"},{n:"Perugia",l:"seriea"},{n:"Vicenza",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Hellas Verona",l:"seriea"}]},
+{name:"Claudio Gentile",ita:true,ret:true,clubs:[{n:"Varese",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Fiorentina",l:"seriea"}]},
+{name:"Gaetano Scirea",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Antonio Cabrini",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Cremonese",l:"seriea"}]},
+{name:"Walter Zenga",ita:true,ret:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Venezia",l:"seriea"},{n:"Piacenza",l:"seriea"},{n:"Sturm Graz",l:"other"},{n:"Coventry City",l:"premier"},{n:"Bradford City",l:"premier"}]},
+{name:"Enrico Chiesa",ita:true,ret:true,clubs:[{n:"Sampdoria",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Siena",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Nicola Ventola",ita:true,ret:true,clubs:[{n:"Bari",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Atletico Madrid",l:"laliga"},{n:"Crystal Palace",l:"premier"},{n:"Juventus",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Bari",l:"seriea"}]},
+{name:"Antonio Cassano",ita:true,ret:true,clubs:[{n:"Bari",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"Sampdoria",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Hellas Verona",l:"seriea"}]},
+{name:"Daniele De Rossi",ita:true,ret:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Boca Juniors",l:"other"}]},
+{name:"Andrea Barzagli",ita:true,ret:true,clubs:[{n:"Marsala",l:"other"},{n:"Palermo",l:"seriea"},{n:"Chievo",l:"seriea"},{n:"Palermo",l:"seriea"},{n:"VfL Wolfsburg",l:"bundesliga"},{n:"Juventus",l:"seriea"}]},
+{name:"Giorgio Chiellini",ita:true,ret:true,clubs:[{n:"Fiorentina",l:"seriea"},{n:"Livorno",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Los Angeles FC",l:"other"}]},
+{name:"Leonardo Bonucci",ita:true,ret:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Treviso",l:"other"},{n:"Pisa",l:"other"},{n:"Genoa",l:"seriea"},{n:"Bari",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Union Berlin",l:"bundesliga"},{n:"Fenerbahce",l:"other"}]},
+{name:"Luigi Di Biagio",ita:true,ret:true,clubs:[{n:"Turris",l:"other"},{n:"Ternana",l:"other"},{n:"Cosenza",l:"other"},{n:"Piacenza",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Sunderland",l:"premier"},{n:"AS Roma",l:"seriea"}]},
+{name:"Marco Tardelli",ita:true,ret:true,clubs:[{n:"Pisa",l:"seriea"},{n:"Como",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"St. Gallen",l:"other"},{n:"Locarno",l:"other"}]},
+{name:"Bruno Conti",ita:true,ret:true,clubs:[{n:"Genoa",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Giancarlo Antognoni",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Lausanne",l:"other"}]},
+{name:"Roberto Pruzzo",ita:true,ret:true,clubs:[{n:"Sampdoria",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Genoa",l:"seriea"}]},
+{name:"Pietro Vierchowod",ita:true,ret:true,clubs:[{n:"Como",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Piacenza",l:"seriea"}]},
+{name:"Carlo Ancelotti",ita:true,ret:true,clubs:[{n:"Parma",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Fulvio Collovati",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Udinese",l:"seriea"}]},
+{name:"Francesco Graziani",ita:true,ret:true,clubs:[{n:"Torino",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Udinese",l:"seriea"},{n:"Cagliari",l:"seriea"}]},
+{name:"Rosario Rampanti",ita:true,ret:true,clubs:[{n:"Fiorentina",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Como",l:"seriea"}]},
+{name:"Roberto Boninsegna",ita:true,ret:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Varese",l:"seriea"},{n:"Cagliari",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Sandro Salvadore",ita:true,ret:true,clubs:[{n:"Juventus",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Varese",l:"seriea"}]},
+{name:"Alessandro Costacurta",ita:true,ret:true,clubs:[{n:"Monza",l:"other"},{n:"AC Milan",l:"seriea"}]},
+{name:"Mauro Tassotti",ita:true,ret:true,clubs:[{n:"Lazio",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Filippo Galli",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Pescara",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Bari",l:"seriea"}]},
+{name:"Zvonimir Boban",ita:false,ret:true,clubs:[{n:"Dinamo Zagreb",l:"other"},{n:"Bari",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Chelsea",l:"premier"}]},
+{name:"Clarence Seedorf",ita:false,ret:true,clubs:[{n:"Ajax",l:"other"},{n:"Sampdoria",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"Inter Milan",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Botafogo",l:"other"},{n:"Shenzhen FC",l:"other"}]},
+{name:"Edgar Davids",ita:false,ret:true,clubs:[{n:"Ajax",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Barcelona",l:"laliga"},{n:"Inter Milan",l:"seriea"},{n:"Tottenham Hotspur",l:"premier"},{n:"Ajax",l:"other"},{n:"Crystal Palace",l:"other"},{n:"Barnet",l:"other"}]},
+{name:"Hernan Crespo",ita:false,ret:true,clubs:[{n:"River Plate",l:"other"},{n:"Parma",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Chelsea",l:"premier"},{n:"AC Milan",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Genoa",l:"seriea"}]},
+{name:"Juan Sebastian Veron",ita:false,ret:true,clubs:[{n:"Estudiantes",l:"other"},{n:"Boca Juniors",l:"other"},{n:"Sampdoria",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Manchester United",l:"premier"},{n:"Chelsea",l:"premier"},{n:"Inter Milan",l:"seriea"},{n:"Estudiantes",l:"other"}]},
+{name:"Pavel Nedved",ita:false,ret:true,clubs:[{n:"Dukla Prague",l:"other"},{n:"Sparta Prague",l:"other"},{n:"Lazio",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+// ============================================================
+// ITALIANI ATTIVI o RECENTI — verificati da Wikipedia
+// ============================================================
+{name:"Ciro Immobile",ita:true,clubs:[{n:"Sorrento",l:"other"},{n:"Juventus",l:"seriea"},{n:"Siena",l:"seriea"},{n:"Grosseto",l:"other"},{n:"Pescara",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Sevilla",l:"laliga"},{n:"Torino",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Besiktas",l:"other"},{n:"Bologna",l:"seriea"},{n:"Paris FC",l:"ligue1"}]},
+{name:"Mario Balotelli",ita:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Lumezzane",l:"other"},{n:"Manchester City",l:"premier"},{n:"AC Milan",l:"seriea"},{n:"Liverpool",l:"premier"},{n:"AC Milan",l:"seriea"},{n:"Nice",l:"ligue1"},{n:"Marseille",l:"ligue1"},{n:"Brescia",l:"seriea"},{n:"Monza",l:"seriea"},{n:"Sion",l:"other"},{n:"Adana Demirspor",l:"other"}]},
+{name:"Nicolo Barella",ita:true,clubs:[{n:"Cagliari",l:"seriea"},{n:"Como",l:"seriea"},{n:"Crotone",l:"seriea"},{n:"Cagliari",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Federico Chiesa",ita:true,clubs:[{n:"Fiorentina",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Liverpool",l:"premier"}]},
+{name:"Federico Bernardeschi",ita:true,ret:true,clubs:[{n:"Crotone",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Toronto FC",l:"other"}]},
+{name:"Marco Verratti",ita:true,clubs:[{n:"Pescara",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Al-Arabi SC",l:"other"}]},
+{name:"Jorginho",ita:true,clubs:[{n:"Hellas Verona",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Chelsea",l:"premier"},{n:"Arsenal",l:"premier"}]},
+{name:"Daniele De Rossi",ita:true,ret:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Boca Juniors",l:"other"}]},
+{name:"Stephan El Shaarawy",ita:true,clubs:[{n:"Genoa",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Monaco",l:"ligue1"},{n:"AS Roma",l:"seriea"},{n:"Shanghai Shenhua",l:"other"},{n:"AS Roma",l:"seriea"}]},
+{name:"Alessio Romagnoli",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Davide Frattesi",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Ascoli",l:"other"},{n:"Monza",l:"seriea"},{n:"Sassuolo",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Matteo Politano",ita:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Perugia",l:"other"},{n:"Sassuolo",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Napoli",l:"seriea"}]},
+{name:"Lorenzo Pellegrini",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Sassuolo",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Bryan Cristante",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Benfica",l:"other"},{n:"Cagliari",l:"seriea"},{n:"Pescara",l:"other"},{n:"Atalanta",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Sandro Tonali",ita:true,clubs:[{n:"Brescia",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Newcastle United",l:"premier"}]},
+{name:"Dusan Vlahovic",ita:false,clubs:[{n:"Partizan",l:"other"},{n:"Fiorentina",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Gianluca Scamacca",ita:true,ret:true,clubs:[{n:"Sassuolo",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Ascoli",l:"other"},{n:"PSV Eindhoven",l:"other"},{n:"Sassuolo",l:"seriea"},{n:"West Ham United",l:"premier"},{n:"Atalanta",l:"seriea"}]},
+{name:"Lautaro Martinez",ita:false,clubs:[{n:"Racing Club",l:"other"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Federico Dimarco",ita:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Spezia",l:"seriea"},{n:"Hellas Verona",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Matteo Darmian",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Manchester United",l:"premier"},{n:"Parma",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Alessandro Bastoni",ita:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Giovanni Di Lorenzo",ita:true,clubs:[{n:"Reggiana",l:"other"},{n:"Matera",l:"other"},{n:"Cosenza",l:"other"},{n:"Empoli",l:"seriea"},{n:"Napoli",l:"seriea"}]},
+{name:"Gianluigi Donnarumma",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+{name:"Gleison Bremer",ita:false,clubs:[{n:"Gremio",l:"other"},{n:"Torino",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Hakan Calhanoglu",ita:false,clubs:[{n:"Karlsruher SC",l:"bundesliga"},{n:"Hamburger SV",l:"bundesliga"},{n:"Bayer Leverkusen",l:"bundesliga"},{n:"AC Milan",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Paulo Dybala",ita:false,clubs:[{n:"Instituto",l:"other"},{n:"Palermo",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Romelu Lukaku",ita:false,clubs:[{n:"Anderlecht",l:"other"},{n:"Chelsea",l:"premier"},{n:"West Bromwich Albion",l:"premier"},{n:"Everton",l:"premier"},{n:"Manchester United",l:"premier"},{n:"Inter Milan",l:"seriea"},{n:"Chelsea",l:"premier"},{n:"AS Roma",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Napoli",l:"seriea"}]},
+{name:"Adrien Rabiot",ita:false,clubs:[{n:"Paris Saint-Germain",l:"ligue1"},{n:"Toulouse",l:"ligue1"},{n:"Juventus",l:"seriea"},{n:"Manchester United",l:"premier"},{n:"Marseille",l:"ligue1"}]},
+{name:"Matteo Guendouzi",ita:false,clubs:[{n:"Manchester City",l:"premier"},{n:"Lorient",l:"ligue1"},{n:"Arsenal",l:"premier"},{n:"Hertha Berlin",l:"bundesliga"},{n:"Marseille",l:"ligue1"},{n:"Lazio",l:"seriea"}]},
+{name:"Marten de Roon",ita:false,clubs:[{n:"Heerenveen",l:"other"},{n:"Atalanta",l:"seriea"},{n:"Middlesbrough",l:"premier"},{n:"Atalanta",l:"seriea"}]},
+{name:"Teun Koopmeiners",ita:false,clubs:[{n:"AZ Alkmaar",l:"other"},{n:"Atalanta",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Ademola Lookman",ita:false,clubs:[{n:"Charlton Athletic",l:"other"},{n:"Everton",l:"premier"},{n:"RB Leipzig",l:"bundesliga"},{n:"Fulham",l:"premier"},{n:"Leicester City",l:"premier"},{n:"Atalanta",l:"seriea"}]},
+{name:"Khvicha Kvaratskhelia",ita:false,clubs:[{n:"Dinamo Tbilisi",l:"other"},{n:"Lokomotiv Moscow",l:"other"},{n:"Rubin Kazan",l:"other"},{n:"Dinamo Batumi",l:"other"},{n:"Napoli",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+{name:"Victor Osimhen",ita:false,clubs:[{n:"VfL Wolfsburg",l:"bundesliga"},{n:"Charleroi",l:"other"},{n:"Lille",l:"ligue1"},{n:"Napoli",l:"seriea"},{n:"Galatasaray",l:"other"}]},
+{name:"Rafael Leao",ita:false,clubs:[{n:"Sporting CP",l:"other"},{n:"Lille",l:"ligue1"},{n:"AC Milan",l:"seriea"}]},
+{name:"Theo Hernandez",ita:false,clubs:[{n:"Atletico Madrid",l:"laliga"},{n:"Alaves",l:"laliga"},{n:"Real Betis",l:"laliga"},{n:"Real Madrid",l:"laliga"},{n:"Real Sociedad",l:"laliga"},{n:"AC Milan",l:"seriea"}]},
+{name:"Mike Maignan",ita:false,clubs:[{n:"Paris Saint-Germain",l:"ligue1"},{n:"Lille",l:"ligue1"},{n:"AC Milan",l:"seriea"}]},
+{name:"Youssouf Fofana",ita:false,clubs:[{n:"Red Star FC",l:"other"},{n:"Drancy",l:"other"},{n:"Strasbourg",l:"ligue1"},{n:"AS Monaco",l:"ligue1"},{n:"AC Milan",l:"seriea"}]},
+{name:"Joao Felix",ita:false,clubs:[{n:"Benfica",l:"other"},{n:"Atletico Madrid",l:"laliga"},{n:"Chelsea",l:"premier"},{n:"Barcelona",l:"laliga"},{n:"Atletico Madrid",l:"laliga"},{n:"AC Milan",l:"seriea"}]},
+{name:"Giacomo Raspadori",ita:true,clubs:[{n:"Sassuolo",l:"seriea"},{n:"Napoli",l:"seriea"}]},
+{name:"Wilfried Gnonto",ita:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Zurich",l:"other"},{n:"Leeds United",l:"premier"}]},
+{name:"Nicola Zalewski",ita:true,clubs:[{n:"AS Roma",l:"seriea"}]},
+{name:"Samuele Ricci",ita:true,clubs:[{n:"Empoli",l:"seriea"},{n:"Torino",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Tommaso Baldanzi",ita:true,clubs:[{n:"Empoli",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Destiny Udogie",ita:true,clubs:[{n:"Hellas Verona",l:"seriea"},{n:"Udinese",l:"seriea"},{n:"Tottenham Hotspur",l:"premier"}]},
+{name:"Raoul Bellanova",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Bordeaux",l:"ligue1"},{n:"Cagliari",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Mattia Zaccagni",ita:true,clubs:[{n:"Hellas Verona",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Francesco Acerbi",ita:true,clubs:[{n:"Brescia",l:"seriea"},{n:"Chievo",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Cagliari",l:"seriea"},{n:"Sassuolo",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Gianluca Mancini",ita:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Perugia",l:"other"},{n:"Hellas Verona",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Nicolo Fagioli",ita:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Cremonese",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Fiorentina",l:"seriea"}]},
+{name:"Mateo Retegui",ita:true,clubs:[{n:"Boca Juniors",l:"other"},{n:"Tigre",l:"other"},{n:"Genoa",l:"seriea"},{n:"Atalanta",l:"seriea"}]},
+{name:"Wilfried Singo",ita:true,clubs:[{n:"Torino",l:"seriea"},{n:"Monaco",l:"ligue1"}]},
+{name:"Mattia De Sciglio",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Olympique Lyonnais",l:"ligue1"},{n:"Juventus",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Riccardo Calafiori",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Basel",l:"other"},{n:"Bologna",l:"seriea"},{n:"Arsenal",l:"premier"}]},
+{name:"Andrea Cambiaso",ita:true,clubs:[{n:"Genoa",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Juventus",l:"seriea"}]},
+{name:"Nicolò Zaniolo",ita:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Galatasaray",l:"other"},{n:"Aston Villa",l:"premier"},{n:"Atalanta",l:"seriea"}]},
+{name:"Giacomo Bonaventura",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Pescara",l:"seriea"},{n:"Empoli",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Lecce",l:"seriea"}]},
+{name:"Roberto Gagliardini",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Monza",l:"seriea"}]},
+{name:"Borja Valero",ita:false,ret:true,clubs:[{n:"Real Madrid",l:"laliga"},{n:"Mallorca",l:"laliga"},{n:"West Bromwich Albion",l:"premier"},{n:"Villarreal",l:"laliga"},{n:"Fiorentina",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Fiorentina",l:"seriea"}]},
+{name:"Franck Kessie",ita:false,clubs:[{n:"Atalanta",l:"seriea"},{n:"Cesena",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Barcelona",l:"laliga"},{n:"Al-Ahli",l:"other"}]},
+{name:"Stefan de Vrij",ita:false,clubs:[{n:"Feyenoord",l:"other"},{n:"Lazio",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Denzel Dumfries",ita:false,clubs:[{n:"Sparta Rotterdam",l:"other"},{n:"PSV Eindhoven",l:"other"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Marcus Thuram",ita:false,clubs:[{n:"Guingamp",l:"ligue1"},{n:"Borussia Monchengladbach",l:"bundesliga"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Benjamin Pavard",ita:false,clubs:[{n:"VfB Stuttgart",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Ivan Perisic",ita:false,ret:true,clubs:[{n:"Sochaux",l:"ligue1"},{n:"Club Brugge",l:"other"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"VfL Wolfsburg",l:"bundesliga"},{n:"Inter Milan",l:"seriea"},{n:"Bayern Munich",l:"bundesliga"},{n:"Tottenham Hotspur",l:"premier"},{n:"Inter Milan",l:"seriea"},{n:"Hajduk Split",l:"other"}]},
+{name:"Marcelo Brozovic",ita:false,clubs:[{n:"Dinamo Zagreb",l:"other"},{n:"Lokomotiv Zagreb",l:"other"},{n:"Dinamo Zagreb",l:"other"},{n:"FC Koper",l:"other"},{n:"Inter Milan",l:"seriea"},{n:"Al-Nassr",l:"other"}]},
+{name:"Nicola Zalewski",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Luca Pellegrini",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Cagliari",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Eintracht Frankfurt",l:"bundesliga"},{n:"Lazio",l:"seriea"}]},
+{name:"Davide Calabria",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Crotone",l:"seriea"}]},
+{name:"Alessandro Florenzi",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Crotone",l:"seriea"},{n:"Valencia",l:"laliga"},{n:"PSG",l:"ligue1"},{n:"AC Milan",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Leonardo Spinazzola",ita:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Perugia",l:"other"},{n:"Empoli",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Napoli",l:"seriea"}]},
+{name:"Marco Sportiello",ita:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"AC Milan",l:"seriea"}]},
+{name:"Pierluigi Gollini",ita:true,clubs:[{n:"Aston Villa",l:"premier"},{n:"Atalanta",l:"seriea"},{n:"Middlesbrough",l:"other"},{n:"Hellas Verona",l:"seriea"},{n:"Tottenham Hotspur",l:"premier"},{n:"Fiorentina",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Genoa",l:"seriea"}]},
+{name:"Simone Verdi",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Empoli",l:"seriea"},{n:"Sassuolo",l:"seriea"},{n:"Carpi",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Hellas Verona",l:"seriea"}]},
+{name:"Gianluca Lapadula",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Pescara",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Benevento",l:"seriea"},{n:"Lecce",l:"seriea"},{n:"Cagliari",l:"seriea"},{n:"Benevento",l:"seriea"}]},
+{name:"Patrick Cutrone",ita:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Wolverhampton Wanderers",l:"premier"},{n:"Fiorentina",l:"seriea"},{n:"Valencia",l:"laliga"},{n:"Empoli",l:"seriea"},{n:"Como",l:"seriea"}]},
+{name:"Alberto Gilardino",ita:true,ret:true,clubs:[{n:"Biellese",l:"other"},{n:"Torino",l:"seriea"},{n:"Piacenza",l:"seriea"},{n:"Parma",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Pescara",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Benevento",l:"seriea"}]},
+{name:"Francesco Toldo",ita:true,ret:true,clubs:[{n:"Vicenza",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Monaco",l:"ligue1"},{n:"Reggina",l:"seriea"}]},
+{name:"Sebastiano Siviglia",ita:true,ret:true,clubs:[{n:"Bari",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Lazio",l:"seriea"}]},
+{name:"Stefano Fiore",ita:true,ret:true,clubs:[{n:"Castel di Sangro",l:"other"},{n:"Udinese",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Valencia",l:"laliga"},{n:"Lazio",l:"seriea"},{n:"Torino",l:"seriea"}]},
+{name:"Giampiero Mughini",ita:true,ret:true,clubs:[{n:"Parma",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Torino",l:"seriea"}]},
+{name:"Christian Panucci",ita:true,ret:true,clubs:[{n:"Genoa",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"Chelsea",l:"premier"},{n:"AS Roma",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Hellas Verona",l:"seriea"}]},
+{name:"Angelo Di Livio",ita:true,ret:true,clubs:[{n:"Massese",l:"other"},{n:"Carrarese",l:"other"},{n:"Prato",l:"other"},{n:"Padova",l:"other"},{n:"Juventus",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Empoli",l:"seriea"}]},
+{name:"Michele Serena",ita:true,ret:true,clubs:[{n:"Torino",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Venezia",l:"seriea"}]},
+{name:"Ciro Ferrara",ita:true,ret:true,clubs:[{n:"Napoli",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Sampdoria",l:"seriea"}]},
+{name:"Moreno Torricelli",ita:true,ret:true,clubs:[{n:"Perugia",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Sampdoria",l:"seriea"}]},
+{name:"Massimo Crippa",ita:true,ret:true,clubs:[{n:"Parma",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Parma",l:"seriea"}]},
+{name:"Dino Baggio",ita:true,ret:true,clubs:[{n:"Torino",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Brescia",l:"seriea"},{n:"Perugia",l:"seriea"}]},
+{name:"Mauro Bressan",ita:true,ret:true,clubs:[{n:"Fiorentina",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Chievo",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Reggina",l:"seriea"}]},
+{name:"Nicola Berti",ita:true,ret:true,clubs:[{n:"Parma",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Tottenham Hotspur",l:"premier"},{n:"Alaves",l:"laliga"}]},
+{name:"Aldo Serena",ita:true,ret:true,clubs:[{n:"Como",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Torino",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Parma",l:"seriea"}]},
+{name:"Gianluca Pessotto",ita:true,ret:true,clubs:[{n:"Torino",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Francesco Baiano",ita:true,ret:true,clubs:[{n:"Avellino",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Foggia",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Derby County",l:"premier"},{n:"Crotone",l:"seriea"}]},
+{name:"Eugenio Corini",ita:true,ret:true,clubs:[{n:"Pisa",l:"seriea"},{n:"Cagliari",l:"seriea"},{n:"Parma",l:"seriea"},{n:"Brescia",l:"seriea"},{n:"Palermo",l:"seriea"},{n:"Lecce",l:"seriea"}]},
+{name:"Salvatore Schillaci",ita:true,ret:true,clubs:[{n:"Messina",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Jubilo Iwata",l:"other"}]},
+{name:"Roberto Negrisolo",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Reggiana",l:"seriea"},{n:"Brescia",l:"seriea"}]},
+{name:"Andrea Ranocchia",ita:true,ret:true,clubs:[{n:"Arezzo",l:"other"},{n:"Bari",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Hull City",l:"premier"},{n:"Monza",l:"seriea"}]},
+{name:"Christian Maggio",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Treviso",l:"other"},{n:"Fiorentina",l:"seriea"},{n:"Udinese",l:"seriea"},{n:"Napoli",l:"seriea"},{n:"Benevento",l:"seriea"}]},
+{name:"Emiliano Viviano",ita:true,ret:true,clubs:[{n:"Fiorentina",l:"seriea"},{n:"Brescia",l:"seriea"},{n:"Palermo",l:"seriea"},{n:"Atalanta",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Sporting CP",l:"other"},{n:"Hellas Verona",l:"seriea"}]},
+{name:"Morgan De Sanctis",ita:true,ret:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Udinese",l:"seriea"},{n:"Sevilla",l:"laliga"},{n:"Napoli",l:"seriea"},{n:"AS Roma",l:"seriea"}]},
+{name:"Lorenzo De Silvestri",ita:true,clubs:[{n:"Lazio",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Fiorentina",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Davide Santon",ita:true,ret:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Newcastle United",l:"premier"},{n:"AS Roma",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Cagliari",l:"seriea"}]},
+{name:"Gianluca Zambrotta",ita:true,ret:true,clubs:[{n:"Como",l:"seriea"},{n:"Bari",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Barcelona",l:"laliga"},{n:"AC Milan",l:"seriea"},{n:"Guangzhou Evergrande",l:"other"},{n:"Novara",l:"seriea"}]},
+{name:"Massimo Oddo",ita:true,ret:true,clubs:[{n:"AC Milan",l:"seriea"},{n:"Piacenza",l:"seriea"},{n:"Hellas Verona",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Bayern Munich",l:"bundesliga"},{n:"Lazio",l:"seriea"},{n:"Udinese",l:"seriea"}]},
+{name:"Gianluca Pagliuca",ita:true,ret:true,clubs:[{n:"Sampdoria",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Ascoli",l:"other"}]},
+{name:"Sebastiano Esposito",ita:true,clubs:[{n:"Inter Milan",l:"seriea"},{n:"Venezia",l:"seriea"},{n:"Spal",l:"seriea"},{n:"Basel",l:"other"},{n:"Anderlecht",l:"other"},{n:"Sampdoria",l:"seriea"},{n:"Empoli",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Francesco Bardi",ita:true,clubs:[{n:"Juventus",l:"seriea"},{n:"Livorno",l:"seriea"},{n:"Frosinone",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Cagliari",l:"seriea"}]},
+{name:"Manolo Gabbiadini",ita:true,ret:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Sampdoria",l:"seriea"}]},
+{name:"Roberto Soriano",ita:true,clubs:[{n:"Sampdoria",l:"seriea"},{n:"Villarreal",l:"laliga"},{n:"Fiorentina",l:"seriea"},{n:"Torino",l:"seriea"},{n:"Bologna",l:"seriea"},{n:"Torino",l:"seriea"}]},
+{name:"Federico Marchetti",ita:true,ret:true,clubs:[{n:"Cagliari",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Genoa",l:"seriea"}]},
+{name:"Cristian Ansaldi",ita:false,clubs:[{n:"Genoa",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Galatasaray",l:"other"},{n:"Zenit Saint Petersburg",l:"other"},{n:"Torino",l:"seriea"}]},
+{name:"Andrea Consigli",ita:true,clubs:[{n:"Atalanta",l:"seriea"},{n:"Sassuolo",l:"seriea"}]},
+{name:"Marco Silvestri",ita:true,clubs:[{n:"Chievo",l:"seriea"},{n:"Carpi",l:"seriea"},{n:"Hellas Verona",l:"seriea"},{n:"Hellas Verona",l:"seriea"},{n:"Udinese",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Ivan Juric",ita:false,ret:true,clubs:[{n:"Hajduk Split",l:"other"},{n:"Chievo",l:"seriea"},{n:"Livorno",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Hajduk Split",l:"other"}]},
+{name:"Luca Marchegiani",ita:true,ret:true,clubs:[{n:"Ternana",l:"other"},{n:"Torino",l:"seriea"},{n:"Lazio",l:"seriea"},{n:"Inter Milan",l:"seriea"}]},
+// ============================================================
+// STRANIERI (internazionali con storia italiana o campioni globali)
+// ============================================================
+{name:"Lionel Messi",ita:false,clubs:[{n:"Barcelona",l:"laliga"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Inter Miami",l:"other"}]},
+{name:"Cristiano Ronaldo",ita:false,clubs:[{n:"Sporting CP",l:"other"},{n:"Manchester United",l:"premier"},{n:"Real Madrid",l:"laliga"},{n:"Juventus",l:"seriea"},{n:"Manchester United",l:"premier"},{n:"Al-Nassr",l:"other"}]},
+{name:"Neymar Jr",ita:false,clubs:[{n:"Santos",l:"other"},{n:"Barcelona",l:"laliga"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Al-Hilal",l:"other"},{n:"Santos",l:"other"}]},
+{name:"Kylian Mbappe",ita:false,clubs:[{n:"AS Monaco",l:"ligue1"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Erling Haaland",ita:false,clubs:[{n:"Bryne FK",l:"other"},{n:"Molde FK",l:"other"},{n:"Red Bull Salzburg",l:"other"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Manchester City",l:"premier"}]},
+{name:"Robert Lewandowski",ita:false,clubs:[{n:"Znicz Pruszkow",l:"other"},{n:"Lech Poznan",l:"other"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"},{n:"Barcelona",l:"laliga"}]},
+{name:"Mohamed Salah",ita:false,clubs:[{n:"Al-Mokawloon",l:"other"},{n:"Basel",l:"other"},{n:"Chelsea",l:"premier"},{n:"Fiorentina",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Liverpool",l:"premier"}]},
+{name:"Karim Benzema",ita:false,ret:true,clubs:[{n:"Olympique Lyonnais",l:"ligue1"},{n:"Real Madrid",l:"laliga"},{n:"Al-Ittihad",l:"other"}]},
+{name:"Kevin De Bruyne",ita:false,clubs:[{n:"Genk",l:"other"},{n:"Chelsea",l:"premier"},{n:"Werder Bremen",l:"bundesliga"},{n:"VfL Wolfsburg",l:"bundesliga"},{n:"Manchester City",l:"premier"}]},
+{name:"Harry Kane",ita:false,clubs:[{n:"Tottenham Hotspur",l:"premier"},{n:"Leyton Orient",l:"other"},{n:"Millwall",l:"other"},{n:"Norwich City",l:"other"},{n:"Leicester City",l:"premier"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Vinicius Junior",ita:false,clubs:[{n:"Flamengo",l:"other"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Zlatan Ibrahimovic",ita:false,ret:true,clubs:[{n:"Malmo FF",l:"other"},{n:"Ajax",l:"other"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Barcelona",l:"laliga"},{n:"AC Milan",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Manchester United",l:"premier"},{n:"LA Galaxy",l:"other"},{n:"AC Milan",l:"seriea"}]},
+{name:"Ronaldinho",ita:false,ret:true,clubs:[{n:"Gremio",l:"other"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Barcelona",l:"laliga"},{n:"AC Milan",l:"seriea"},{n:"Flamengo",l:"other"},{n:"Atletico Mineiro",l:"other"},{n:"Queretaro",l:"other"},{n:"Fluminense",l:"other"}]},
+{name:"Ronaldo Nazario",ita:false,ret:true,clubs:[{n:"Cruzeiro",l:"other"},{n:"PSV Eindhoven",l:"other"},{n:"Barcelona",l:"laliga"},{n:"Inter Milan",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"AC Milan",l:"seriea"},{n:"Corinthians",l:"other"},{n:"Flamengo",l:"other"}]},
+{name:"Thierry Henry",ita:false,ret:true,clubs:[{n:"Monaco",l:"ligue1"},{n:"Juventus",l:"seriea"},{n:"Arsenal",l:"premier"},{n:"Barcelona",l:"laliga"},{n:"New York Red Bulls",l:"other"},{n:"Arsenal",l:"premier"}]},
+{name:"Wayne Rooney",ita:false,ret:true,clubs:[{n:"Everton",l:"premier"},{n:"Manchester United",l:"premier"},{n:"Everton",l:"premier"},{n:"D.C. United",l:"other"},{n:"Derby County",l:"other"}]},
+{name:"Frank Lampard",ita:false,ret:true,clubs:[{n:"West Ham United",l:"premier"},{n:"Swansea City",l:"premier"},{n:"Chelsea",l:"premier"},{n:"Manchester City",l:"premier"},{n:"New York City FC",l:"other"}]},
+{name:"Steven Gerrard",ita:false,ret:true,clubs:[{n:"Liverpool",l:"premier"},{n:"LA Galaxy",l:"other"}]},
+{name:"Zinedine Zidane",ita:false,ret:true,clubs:[{n:"Cannes",l:"ligue1"},{n:"Bordeaux",l:"ligue1"},{n:"Juventus",l:"seriea"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Kaka",ita:false,ret:true,clubs:[{n:"Sao Paulo",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"AC Milan",l:"seriea"},{n:"Orlando City",l:"other"},{n:"Sao Paulo",l:"other"}]},
+{name:"Gabriel Batistuta",ita:false,ret:true,clubs:[{n:"Newell's Old Boys",l:"other"},{n:"River Plate",l:"other"},{n:"Boca Juniors",l:"other"},{n:"Fiorentina",l:"seriea"},{n:"AS Roma",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Al-Arabi",l:"other"}]},
+{name:"Andriy Shevchenko",ita:false,ret:true,clubs:[{n:"Dynamo Kyiv",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Chelsea",l:"premier"},{n:"AC Milan",l:"seriea"},{n:"Dynamo Kyiv",l:"other"}]},
+{name:"Antoine Griezmann",ita:false,clubs:[{n:"Real Sociedad",l:"laliga"},{n:"Atletico Madrid",l:"laliga"},{n:"Barcelona",l:"laliga"},{n:"Atletico Madrid",l:"laliga"}]},
+{name:"Eden Hazard",ita:false,ret:true,clubs:[{n:"Lille",l:"ligue1"},{n:"Chelsea",l:"premier"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Sergio Ramos",ita:false,clubs:[{n:"Sevilla",l:"laliga"},{n:"Real Madrid",l:"laliga"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Sevilla",l:"laliga"},{n:"Monterrey",l:"other"}]},
+{name:"Luka Modric",ita:false,clubs:[{n:"Dinamo Zagreb",l:"other"},{n:"Zrinjski Mostar",l:"other"},{n:"Inter Zapresic",l:"other"},{n:"Tottenham Hotspur",l:"premier"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Toni Kroos",ita:false,ret:true,clubs:[{n:"Bayern Munich",l:"bundesliga"},{n:"Bayer Leverkusen",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Xavi Hernandez",ita:false,ret:true,clubs:[{n:"Barcelona",l:"laliga"},{n:"Al Sadd",l:"other"}]},
+{name:"Andres Iniesta",ita:false,ret:true,clubs:[{n:"Barcelona",l:"laliga"},{n:"Vissel Kobe",l:"other"},{n:"Emirates Club",l:"other"}]},
+{name:"Mesut Ozil",ita:false,ret:true,clubs:[{n:"Schalke 04",l:"bundesliga"},{n:"Werder Bremen",l:"bundesliga"},{n:"Real Madrid",l:"laliga"},{n:"Arsenal",l:"premier"},{n:"Fenerbahce",l:"other"}]},
+{name:"Gareth Bale",ita:false,ret:true,clubs:[{n:"Southampton",l:"premier"},{n:"Tottenham Hotspur",l:"premier"},{n:"Real Madrid",l:"laliga"},{n:"Tottenham Hotspur",l:"premier"},{n:"Real Madrid",l:"laliga"},{n:"LAFC",l:"other"}]},
+{name:"Arjen Robben",ita:false,ret:true,clubs:[{n:"Groningen",l:"other"},{n:"PSV Eindhoven",l:"other"},{n:"Chelsea",l:"premier"},{n:"Real Madrid",l:"laliga"},{n:"Bayern Munich",l:"bundesliga"},{n:"Groningen",l:"other"}]},
+{name:"Franck Ribery",ita:false,ret:true,clubs:[{n:"Boulogne",l:"other"},{n:"Ales",l:"other"},{n:"Brest",l:"ligue1"},{n:"Metz",l:"ligue1"},{n:"Galatasaray",l:"other"},{n:"Marseille",l:"ligue1"},{n:"Bayern Munich",l:"bundesliga"},{n:"Fiorentina",l:"seriea"},{n:"Salernitana",l:"seriea"}]},
+{name:"David Silva",ita:false,ret:true,clubs:[{n:"Valencia",l:"laliga"},{n:"Eibar",l:"laliga"},{n:"Celta Vigo",l:"laliga"},{n:"Manchester City",l:"premier"},{n:"Real Sociedad",l:"laliga"}]},
+{name:"Cesc Fabregas",ita:false,ret:true,clubs:[{n:"Arsenal",l:"premier"},{n:"Barcelona",l:"laliga"},{n:"Chelsea",l:"premier"},{n:"Monaco",l:"ligue1"},{n:"Como",l:"seriea"}]},
+{name:"Radamel Falcao",ita:false,ret:true,clubs:[{n:"Lanceros Boyaca",l:"other"},{n:"River Plate",l:"other"},{n:"FC Porto",l:"other"},{n:"Atletico Madrid",l:"laliga"},{n:"Monaco",l:"ligue1"},{n:"Manchester United",l:"premier"},{n:"Chelsea",l:"premier"},{n:"Monaco",l:"ligue1"},{n:"Galatasaray",l:"other"},{n:"Rayo Vallecano",l:"laliga"}]},
+{name:"Fernando Torres",ita:false,ret:true,clubs:[{n:"Atletico Madrid",l:"laliga"},{n:"Liverpool",l:"premier"},{n:"Chelsea",l:"premier"},{n:"AC Milan",l:"seriea"},{n:"Atletico Madrid",l:"laliga"},{n:"Sagan Tosu",l:"other"},{n:"Atletico Madrid",l:"laliga"}]},
+{name:"Didier Drogba",ita:false,ret:true,clubs:[{n:"Le Mans",l:"ligue1"},{n:"Gueugnon",l:"ligue1"},{n:"Marseille",l:"ligue1"},{n:"Chelsea",l:"premier"},{n:"Shanghai Shenhua",l:"other"},{n:"Galatasaray",l:"other"},{n:"Chelsea",l:"premier"},{n:"Montreal Impact",l:"other"}]},
+{name:"Samuel Eto'o",ita:false,ret:true,clubs:[{n:"Real Madrid",l:"laliga"},{n:"Leganes",l:"laliga"},{n:"Mallorca",l:"laliga"},{n:"Barcelona",l:"laliga"},{n:"Inter Milan",l:"seriea"},{n:"Anzhi",l:"other"},{n:"Chelsea",l:"premier"},{n:"Everton",l:"premier"},{n:"Sampdoria",l:"seriea"},{n:"Antalyaspor",l:"other"},{n:"Konyaspor",l:"other"}]},
+{name:"Thiago Silva",ita:false,ret:true,clubs:[{n:"Juventude",l:"other"},{n:"FC Porto",l:"other"},{n:"Dynamo Moscow",l:"other"},{n:"Fluminense",l:"other"},{n:"AC Milan",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Chelsea",l:"premier"},{n:"Fluminense",l:"other"}]},
+{name:"Dani Alves",ita:false,ret:true,clubs:[{n:"Bahia",l:"other"},{n:"Sevilla",l:"laliga"},{n:"Barcelona",l:"laliga"},{n:"Juventus",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Sao Paulo",l:"other"},{n:"Pumas UNAM",l:"other"},{n:"Barcelona",l:"laliga"}]},
+{name:"Luis Figo",ita:false,ret:true,clubs:[{n:"Sporting CP",l:"other"},{n:"Barcelona",l:"laliga"},{n:"Real Madrid",l:"laliga"},{n:"Inter Milan",l:"seriea"}]},
+{name:"Patrick Vieira",ita:false,ret:true,clubs:[{n:"Cannes",l:"ligue1"},{n:"AC Milan",l:"seriea"},{n:"Arsenal",l:"premier"},{n:"Juventus",l:"seriea"},{n:"Inter Milan",l:"seriea"},{n:"Manchester City",l:"premier"},{n:"New York City FC",l:"other"}]},
+{name:"Michael Ballack",ita:false,ret:true,clubs:[{n:"Chemnitzer FC",l:"bundesliga"},{n:"Kaiserslautern",l:"bundesliga"},{n:"Bayer Leverkusen",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"},{n:"Chelsea",l:"premier"},{n:"Bayer Leverkusen",l:"bundesliga"}]},
+{name:"Jude Bellingham",ita:false,clubs:[{n:"Birmingham City",l:"other"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Pedri",ita:false,clubs:[{n:"Las Palmas",l:"laliga"},{n:"Barcelona",l:"laliga"}]},
+{name:"Florian Wirtz",ita:false,clubs:[{n:"Bayer Leverkusen",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Jamal Musiala",ita:false,clubs:[{n:"Chelsea",l:"premier"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Jadon Sancho",ita:false,clubs:[{n:"Manchester City",l:"premier"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Manchester United",l:"premier"},{n:"Chelsea",l:"premier"},{n:"Borussia Dortmund",l:"bundesliga"}]},
+{name:"Ousmane Dembele",ita:false,clubs:[{n:"Rennes",l:"ligue1"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Barcelona",l:"laliga"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+{name:"Frenkie de Jong",ita:false,clubs:[{n:"Willem II",l:"other"},{n:"Ajax",l:"other"},{n:"Barcelona",l:"laliga"}]},
+{name:"Bernardo Silva",ita:false,clubs:[{n:"Benfica",l:"other"},{n:"Monaco",l:"ligue1"},{n:"Manchester City",l:"premier"},{n:"Barcelona",l:"laliga"}]},
+{name:"Phil Foden",ita:false,clubs:[{n:"Manchester City",l:"premier"}]},
+{name:"Bukayo Saka",ita:false,clubs:[{n:"Arsenal",l:"premier"}]},
+{name:"Marcus Rashford",ita:false,clubs:[{n:"Manchester United",l:"premier"},{n:"Aston Villa",l:"premier"}]},
+{name:"Martin Odegaard",ita:false,clubs:[{n:"Stromsgodset",l:"other"},{n:"Real Madrid",l:"laliga"},{n:"Heerenveen",l:"other"},{n:"Vitesse Arnhem",l:"other"},{n:"Real Sociedad",l:"laliga"},{n:"Arsenal",l:"premier"}]},
+{name:"Granit Xhaka",ita:false,clubs:[{n:"Basel",l:"other"},{n:"Borussia Monchengladbach",l:"bundesliga"},{n:"Arsenal",l:"premier"},{n:"Bayer Leverkusen",l:"bundesliga"}]},
+{name:"Declan Rice",ita:false,clubs:[{n:"Chelsea",l:"premier"},{n:"West Ham United",l:"premier"},{n:"Arsenal",l:"premier"}]},
+{name:"Cole Palmer",ita:false,clubs:[{n:"Manchester City",l:"premier"},{n:"Chelsea",l:"premier"}]},
+{name:"Michael Olise",ita:false,clubs:[{n:"Chelsea",l:"premier"},{n:"Crystal Palace",l:"premier"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Joshua Kimmich",ita:false,clubs:[{n:"VfB Stuttgart",l:"bundesliga"},{n:"RB Leipzig",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Thomas Muller",ita:false,ret:true,clubs:[{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Leroy Sane",ita:false,clubs:[{n:"Schalke 04",l:"bundesliga"},{n:"Manchester City",l:"premier"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Alphonso Davies",ita:false,clubs:[{n:"FC Edmonton",l:"other"},{n:"Vancouver Whitecaps",l:"other"},{n:"Bayern Munich",l:"bundesliga"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Marquinhos",ita:false,clubs:[{n:"AS Roma",l:"seriea"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+{name:"Darwin Nunez",ita:false,clubs:[{n:"Penarol",l:"other"},{n:"Almeria",l:"laliga"},{n:"Benfica",l:"other"},{n:"Liverpool",l:"premier"}]},
+{name:"Jonathan David",ita:false,clubs:[{n:"KAA Gent",l:"other"},{n:"Lille",l:"ligue1"},{n:"Atletico Madrid",l:"laliga"}]},
+{name:"Randal Kolo Muani",ita:false,clubs:[{n:"Nantes",l:"ligue1"},{n:"Eintracht Frankfurt",l:"bundesliga"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"Juventus",l:"seriea"}]},
+{name:"Riccardo Calafiori",ita:true,clubs:[{n:"AS Roma",l:"seriea"},{n:"Genoa",l:"seriea"},{n:"Basel",l:"other"},{n:"Bologna",l:"seriea"},{n:"Arsenal",l:"premier"}]},
+{name:"N'Golo Kante",ita:false,clubs:[{n:"JS Suresnes",l:"other"},{n:"Boulogne",l:"ligue1"},{n:"Caen",l:"ligue1"},{n:"Leicester City",l:"premier"},{n:"Chelsea",l:"premier"},{n:"Al-Ittihad",l:"other"}]},
+{name:"Paul Pogba",ita:false,clubs:[{n:"Le Havre",l:"ligue1"},{n:"Manchester United",l:"premier"},{n:"Juventus",l:"seriea"},{n:"Manchester United",l:"premier"},{n:"Juventus",l:"seriea"}]},
+{name:"Raphael Varane",ita:false,ret:true,clubs:[{n:"Lens",l:"ligue1"},{n:"Real Madrid",l:"laliga"},{n:"Manchester United",l:"premier"},{n:"Como",l:"seriea"}]},
+{name:"Aurelien Tchouameni",ita:false,clubs:[{n:"Bordeaux",l:"ligue1"},{n:"Monaco",l:"ligue1"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Eduardo Camavinga",ita:false,clubs:[{n:"Rennes",l:"ligue1"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Virgil van Dijk",ita:false,clubs:[{n:"Groningen",l:"other"},{n:"Celtic",l:"other"},{n:"Southampton",l:"premier"},{n:"Liverpool",l:"premier"}]},
+{name:"Thibaut Courtois",ita:false,clubs:[{n:"Genk",l:"other"},{n:"Chelsea",l:"premier"},{n:"Atletico Madrid",l:"laliga"},{n:"Chelsea",l:"premier"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Alisson Becker",ita:false,clubs:[{n:"Internacional",l:"other"},{n:"AS Roma",l:"seriea"},{n:"Liverpool",l:"premier"}]},
+{name:"Bruno Fernandes",ita:false,clubs:[{n:"Novara",l:"seriea"},{n:"Udinese",l:"seriea"},{n:"Sampdoria",l:"seriea"},{n:"Sporting CP",l:"other"},{n:"Manchester United",l:"premier"}]},
+{name:"Son Heung-min",ita:false,clubs:[{n:"Hamburg SV",l:"bundesliga"},{n:"Bayer Leverkusen",l:"bundesliga"},{n:"Tottenham Hotspur",l:"premier"}]},
+{name:"David Alaba",ita:false,clubs:[{n:"Bayern Munich",l:"bundesliga"},{n:"Hoffenheim",l:"bundesliga"},{n:"Bayer Leverkusen",l:"bundesliga"},{n:"Real Madrid",l:"laliga"}]},
+{name:"Sadio Mane",ita:false,ret:true,clubs:[{n:"Generation Foot",l:"other"},{n:"Metz",l:"ligue1"},{n:"Red Bull Salzburg",l:"other"},{n:"Southampton",l:"premier"},{n:"Liverpool",l:"premier"},{n:"Bayern Munich",l:"bundesliga"},{n:"Al-Nassr",l:"other"}]},
+{name:"Olivier Giroud",ita:false,ret:true,clubs:[{n:"Grenoble",l:"ligue1"},{n:"Istres",l:"ligue1"},{n:"Tours",l:"ligue1"},{n:"Montpellier",l:"ligue1"},{n:"Arsenal",l:"premier"},{n:"Chelsea",l:"premier"},{n:"AC Milan",l:"seriea"},{n:"LAFC",l:"other"}]},
+{name:"Xavi Simons",ita:false,clubs:[{n:"Barcelona",l:"laliga"},{n:"Paris Saint-Germain",l:"ligue1"},{n:"PSV Eindhoven",l:"other"},{n:"RB Leipzig",l:"bundesliga"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+{name:"Lois Openda",ita:false,clubs:[{n:"Club Brugge",l:"other"},{n:"Vitesse Arnhem",l:"other"},{n:"RC Lens",l:"ligue1"},{n:"RB Leipzig",l:"bundesliga"}]},
+{name:"Benjamin Sesko",ita:false,clubs:[{n:"Red Bull Salzburg",l:"other"},{n:"RB Leipzig",l:"bundesliga"},{n:"Arsenal",l:"premier"}]},
+{name:"Cody Gakpo",ita:false,clubs:[{n:"PSV Eindhoven",l:"other"},{n:"Liverpool",l:"premier"}]},
+{name:"William Saliba",ita:false,clubs:[{n:"AS Saint-Etienne",l:"ligue1"},{n:"Arsenal",l:"premier"},{n:"Nice",l:"ligue1"},{n:"Arsenal",l:"premier"}]},
+{name:"Enzo Fernandez",ita:false,clubs:[{n:"River Plate",l:"other"},{n:"Defensa y Justicia",l:"other"},{n:"Benfica",l:"other"},{n:"Chelsea",l:"premier"}]},
+{name:"Moises Caicedo",ita:false,clubs:[{n:"Independiente del Valle",l:"other"},{n:"Brighton",l:"premier"},{n:"Chelsea",l:"premier"}]},
+{name:"Alejandro Garnacho",ita:false,clubs:[{n:"Atletico Madrid",l:"laliga"},{n:"Manchester United",l:"premier"},{n:"Napoli",l:"seriea"}]},
+{name:"Rasmus Hojlund",ita:false,clubs:[{n:"FC Copenhagen",l:"other"},{n:"Sturm Graz",l:"other"},{n:"Atalanta",l:"seriea"},{n:"Manchester United",l:"premier"}]},
+{name:"Dani Olmo",ita:false,clubs:[{n:"Barcelona",l:"laliga"},{n:"Dinamo Zagreb",l:"other"},{n:"RB Leipzig",l:"bundesliga"},{n:"Barcelona",l:"laliga"}]},
+{name:"Ferran Torres",ita:false,clubs:[{n:"Valencia",l:"laliga"},{n:"Manchester City",l:"premier"},{n:"Barcelona",l:"laliga"}]},
+{name:"Alvaro Morata",ita:false,ret:true,clubs:[{n:"Real Madrid",l:"laliga"},{n:"Getafe",l:"laliga"},{n:"Real Madrid",l:"laliga"},{n:"Juventus",l:"seriea"},{n:"Real Madrid",l:"laliga"},{n:"Chelsea",l:"premier"},{n:"Atletico Madrid",l:"laliga"},{n:"Juventus",l:"seriea"},{n:"AC Milan",l:"seriea"},{n:"Atletico Madrid",l:"laliga"}]},
+{name:"Ilkay Gundogan",ita:false,clubs:[{n:"Borussia Dortmund",l:"bundesliga"},{n:"Manchester City",l:"premier"},{n:"Barcelona",l:"laliga"},{n:"Manchester City",l:"premier"}]},
+{name:"Leon Goretzka",ita:false,clubs:[{n:"VfL Bochum",l:"bundesliga"},{n:"Schalke 04",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Kingsley Coman",ita:false,clubs:[{n:"Paris Saint-Germain",l:"ligue1"},{n:"Juventus",l:"seriea"},{n:"Augsburg",l:"bundesliga"},{n:"Bayern Munich",l:"bundesliga"}]},
+{name:"Christopher Nkunku",ita:false,clubs:[{n:"Paris Saint-Germain",l:"ligue1"},{n:"RB Leipzig",l:"bundesliga"},{n:"Chelsea",l:"premier"}]},
+{name:"Kaoru Mitoma",ita:false,clubs:[{n:"Kawasaki Frontale",l:"other"},{n:"Union Saint-Gilloise",l:"other"},{n:"Brighton",l:"premier"},{n:"Atletico Madrid",l:"laliga"}]},
+{name:"Mikel Merino",ita:false,clubs:[{n:"Osasuna",l:"laliga"},{n:"Borussia Dortmund",l:"bundesliga"},{n:"Newcastle United",l:"premier"},{n:"Real Sociedad",l:"laliga"},{n:"Arsenal",l:"premier"}]},
+{name:"Lucas Hernandez",ita:false,clubs:[{n:"Atletico Madrid",l:"laliga"},{n:"Bayern Munich",l:"bundesliga"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+{name:"Alex Grimaldo",ita:false,clubs:[{n:"Barcelona",l:"laliga"},{n:"Benfica",l:"other"},{n:"Bayer Leverkusen",l:"bundesliga"}]},
+{name:"Diogo Jota",ita:false,clubs:[{n:"Pacos de Ferreira",l:"other"},{n:"Atletico Madrid",l:"laliga"},{n:"Porto",l:"other"},{n:"Wolverhampton Wanderers",l:"premier"},{n:"Liverpool",l:"premier"}]},
+{name:"Joao Cancelo",ita:false,clubs:[{n:"Valencia",l:"laliga"},{n:"Inter Milan",l:"seriea"},{n:"Juventus",l:"seriea"},{n:"Manchester City",l:"premier"},{n:"Bayern Munich",l:"bundesliga"},{n:"Barcelona",l:"laliga"}]},
+{name:"Nuno Mendes",ita:false,clubs:[{n:"Sporting CP",l:"other"},{n:"Paris Saint-Germain",l:"ligue1"}]},
+];
+
+// Dedup per nome
+const seen=new Set();
+const DATABASE=DB.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;});
+const ITA_DB=DATABASE.filter(p=>p.ita===true);
+const ALL_NAMES=[...new Set(DATABASE.map(p=>p.name))].sort();
+const ITA_NAMES=[...new Set(ITA_DB.map(p=>p.name))].sort();
+
+document.getElementById('db-count').textContent=DATABASE.length+' calciatori ('+ITA_DB.length+' italiani)';
+
+// ===================== STATE =====================
+let S={players:[],scores:{},round:1,mode:'all',footballer:null,
+  cluesShown:0,currentTurnIdx:0,skippedThisClue:[],
+  lastClueInfinite:false,roundOver:false,usedIdx:[]};
+
+// DOM
+const $setup=document.getElementById('setup-screen');
+const $game=document.getElementById('game-screen');
+const $win=document.getElementById('win-screen');
+const $roundNum=document.getElementById('round-num');
+const $roundBadge=document.getElementById('round-badge');
+const $cluesShown=document.getElementById('clues-shown');
+const $cluesTotal=document.getElementById('clues-total');
+const $clubs=document.getElementById('clubs-wrap');
+const $turn=document.getElementById('current-turn');
+const $fb=document.getElementById('feedback');
+const $gi=document.getElementById('guess-input');
+const $bg=document.getElementById('btn-guess');
+const $wl=document.getElementById('waiting-list');
+const $btnNext=document.getElementById('btn-next');
+const $btnReveal=document.getElementById('btn-reveal');
+const $lastNotice=document.getElementById('last-notice');
+const $revealBox=document.getElementById('reveal-box');
+const $revealName=document.getElementById('reveal-name');
+const $btnNRI=document.getElementById('btn-nri');
+const $modeBanner=document.getElementById('mode-banner');
+const $btnStart=document.getElementById('btn-start');
+
+// MODE SELECTOR
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-btn').forEach(b=>{b.classList.remove('active-mode','ita');});
+    btn.classList.add('active-mode');
+    S.mode=btn.dataset.mode;
+    if(S.mode==='ita'){btn.classList.add('ita');$btnStart.classList.add('ita-mode');}
+    else{$btnStart.classList.remove('ita-mode');}
+  });
+});
+
+// ADD PLAYER
+document.getElementById('btn-add').addEventListener('click',()=>{
+  const list=document.getElementById('player-list');
+  if(list.children.length>=8)return;
+  const n=list.children.length+1;
+  const row=document.createElement('div');row.className='player-row';
+  row.innerHTML=`<input class="player-input" type="text" placeholder="Nome giocatore ${n}" maxlength="30"><button class="btn-remove" onclick="this.parentElement.remove()">x</button>`;
+  list.appendChild(row);
+});
+
+// START
+$btnStart.addEventListener('click',()=>{
+  const names=[...document.querySelectorAll('.player-input')].map(i=>i.value.trim()).filter(Boolean);
+  if(names.length<2){alert('Aggiungi almeno 2 giocatori!');return;}
+  S.players=names;S.scores={};S.round=1;S.usedIdx=[];
+  names.forEach(n=>S.scores[n]=0);
+  $setup.style.display='none';$game.style.display='block';
+  // mode badge
+  if(S.mode==='ita'){$modeBanner.style.display='block';$roundBadge.className='round-badge ita';}
+  else{$modeBanner.style.display='none';$roundBadge.className='round-badge normal';}
+  startRound();
+});
+
+function getPool(){return S.mode==='ita'?ITA_DB:DATABASE;}
+
+function startRound(){
+  $win.style.display='none';$game.style.display='block';
+  $clubs.innerHTML='';$lastNotice.style.display='none';
+  $revealBox.style.display='none';$btnNRI.style.display='none';$btnReveal.style.display='none';
+  hideFB();
+  $roundNum.textContent=S.round;$roundBadge.textContent='Round '+S.round;
+  S.cluesShown=0;S.currentTurnIdx=0;S.skippedThisClue=[];S.roundOver=false;S.lastClueInfinite=false;
+  const pool=getPool().filter((_,i)=>!S.usedIdx.includes(getPool().indexOf(getPool()[i])));
+  const filteredPool=getPool().filter(p=>!S.usedIdx.includes(DATABASE.indexOf(p)));
+  if(!filteredPool.length){S.usedIdx=[];startRound();return;}
+  const pick=filteredPool[Math.floor(Math.random()*filteredPool.length)];
+  S.usedIdx.push(DATABASE.indexOf(pick));S.footballer=pick;
+  $cluesTotal.textContent=pick.clubs.length;$cluesShown.textContent='0';
+  renderWaiting();revealNextClue();
+}
+
+function revealNextClue(){
+  if(S.roundOver)return;
+  const clubs=S.footballer.clubs;
+  if(S.cluesShown>=clubs.length)return;
+  const club=clubs[S.cluesShown];
+  const lg=L[club.l]||L.other;
+  const badge=document.createElement('div');badge.className='club-badge';
+  badge.innerHTML=`<span class="league-pill" style="background:${lg.c}">${lg.f}</span><span class="league-dot" style="background:${lg.c}"></span><span>${club.n}</span>`;
+  $clubs.appendChild(badge);
+  S.cluesShown++;$cluesShown.textContent=S.cluesShown;S.skippedThisClue=[];
+  const isLast=S.cluesShown===clubs.length;
+  if(isLast){S.lastClueInfinite=true;$lastNotice.style.display='block';$btnNext.disabled=true;$btnNext.style.display='none';$btnReveal.style.display='block';}
+  else{$btnNext.disabled=false;$btnNext.style.display='block';$btnNext.textContent='Prossima squadra →';$btnReveal.style.display='none';}
+  $gi.value='';$gi.disabled=false;$bg.disabled=false;hideFB();hideAC();renderWaiting();$gi.focus();
+}
+
+function nextTurn(){
+  if(S.roundOver)return;
+  const active=S.players.map((_,i)=>i).filter(i=>!S.skippedThisClue.includes(i));
+  if(active.length===0){
+    if(S.lastClueInfinite){S.skippedThisClue=[];S.currentTurnIdx=0;$gi.value='';$gi.disabled=false;$bg.disabled=false;hideFB();renderWaiting();$gi.focus();}
+    else{showFB('Tutti sbagliato! Prossima squadra...','wrong');$gi.disabled=true;$bg.disabled=true;setTimeout(()=>{if(!S.roundOver)revealNextClue();},1500);}
+    return;
+  }
+  for(let i=1;i<=S.players.length;i++){const c=(S.currentTurnIdx+i)%S.players.length;if(active.includes(c)){S.currentTurnIdx=c;break;}}
+  if(!active.includes(S.currentTurnIdx))S.currentTurnIdx=active[0];
+  $gi.value='';$gi.disabled=false;$bg.disabled=false;hideFB();hideAC();renderWaiting();$gi.focus();
+}
+
+function renderWaiting(){
+  $turn.textContent=S.players[S.currentTurnIdx].toUpperCase();
+  $wl.innerHTML=S.players.map((name,i)=>{if(i===S.currentTurnIdx)return'';const sk=S.skippedThisClue.includes(i);return`<span class="chip${sk?' skipped':''}">${name}</span>`;}).join('');
+}
+
+$bg.addEventListener('click',submitGuess);
+$gi.addEventListener('keydown',e=>{if(e.key==='Enter')submitGuess();});
+
+function submitGuess(){
+  const val=$gi.value.trim();if(!val)return;
+  if(val.toLowerCase()===S.footballer.name.toLowerCase())handleWin();
+  else handleWrong();
+}
+
+function handleWin(){
+  const winner=S.players[S.currentTurnIdx];
+  const pts=S.footballer.clubs.length-S.cluesShown+1;
+  S.scores[winner]+=pts;S.roundOver=true;
+  $gi.disabled=true;$bg.disabled=true;$btnNext.disabled=true;$btnReveal.style.display='none';
+  showFB('Corretto! Era '+S.footballer.name+'! +'+pts+' punti','correct');
+  setTimeout(()=>{
+    $game.style.display='none';$win.style.display='block';
+    document.getElementById('win-pname').textContent=winner;
+    document.getElementById('win-info').textContent='Indovinato con '+S.cluesShown+' squadr'+(S.cluesShown===1?'a':'e')+' su '+S.footballer.clubs.length+'   +'+pts+' punt'+(pts===1?'o':'i');
+    const sorted=[...S.players].sort((a,b)=>S.scores[b]-S.scores[a]);
+    document.getElementById('scores-body').innerHTML=sorted.map((name,i)=>`<div class="score-row${name===winner?' winner':''}"><div class="score-pos">${i+1}</div><div class="score-name">${name}${name===winner?' 🏆':''}</div><div class="score-pts">${S.scores[name]}</div></div>`).join('');
+  },900);
+}
+
+function handleWrong(){
+  const name=S.players[S.currentTurnIdx];
+  showFB('Sbagliato, '+name+'!'+(S.lastClueInfinite?' Riprova!':' Aspetta la prossima.'),'wrong');
+  $gi.disabled=true;$bg.disabled=true;
+  if(!S.lastClueInfinite)S.skippedThisClue.push(S.currentTurnIdx);
+  else S.currentTurnIdx=(S.currentTurnIdx+1)%S.players.length;
+  setTimeout(()=>{if(!S.roundOver)nextTurn();},1200);
+}
+
+$btnReveal.addEventListener('click',()=>{
+  if(S.roundOver)return;
+  S.roundOver=true;$gi.disabled=true;$bg.disabled=true;$btnReveal.style.display='none';
+  $revealName.textContent=S.footballer.name;$revealBox.style.display='block';$btnNRI.style.display='block';
+  hideFB();$turn.textContent='—';$wl.innerHTML='';
+});
+
+$btnNRI.addEventListener('click',()=>{S.round++;startRound();});
+$btnNext.addEventListener('click',()=>{if(S.cluesShown<S.footballer.clubs.length&&!S.roundOver){hideFB();revealNextClue();}});
+
+// AUTOCOMPLETE
+function getNames(){return S.mode==='ita'?ITA_NAMES:ALL_NAMES;}
+$gi.addEventListener('input',()=>{
+  const v=$gi.value.trim().toLowerCase();
+  const list=document.getElementById('ac-list');
+  if(!v||v.length<2){hideAC();return;}
+  const m=getNames().filter(n=>n.toLowerCase().includes(v)).slice(0,8);
+  if(!m.length){hideAC();return;}
+  list.innerHTML=m.map(n=>`<div class="ac-item" data-n="${n}">${n}</div>`).join('');
+  list.style.display='block';
+  list.querySelectorAll('.ac-item').forEach(el=>{el.addEventListener('click',()=>{$gi.value=el.dataset.n;hideAC();$gi.focus();});});
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))hideAC();});
+function hideAC(){document.getElementById('ac-list').style.display='none';}
+function showFB(msg,type){$fb.textContent=msg;$fb.className='feedback '+type;$fb.style.display='block';}
+function hideFB(){$fb.style.display='none';}
+
+document.getElementById('btn-new-round').addEventListener('click',()=>{S.round++;startRound();});
+document.getElementById('btn-end').addEventListener('click',()=>{$win.style.display='none';$setup.style.display='block';});
+</script>
+</body>
+</html>
